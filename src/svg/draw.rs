@@ -10,13 +10,25 @@ const CENTER_X: u64 = 50;
 const CENTER_Y: u64 = 50;
 
 pub fn draw(borders: Vec<Border>) {
-    let mut drawing = Drawing { data: Data::new() };
+    let mut data = Data::new();
 
     for border in borders {
         let info = start_info(&border);
-        drawing = match border.border_type {
-            BorderType::Line => drawing.line(info),
-            BorderType::Arc => drawing.arc(info),
+        data = data.move_to(info.coord);
+        data = match border.border_type {
+            BorderType::Arc => {
+                let params = arc(&info);
+                data.elliptical_arc_to((
+                    info.radius,
+                    info.radius,
+                    0,
+                    params.0,
+                    0,
+                    params.1,
+                    params.2,
+                ))
+            }
+            BorderType::Line => data.line_to(line(&info)),
         };
     }
 
@@ -24,44 +36,24 @@ pub fn draw(borders: Vec<Border>) {
         .set("fill", "none")
         .set("stroke", "black")
         .set("stroke-width", 1)
-        .set("d", drawing.data);
+        .set("d", data);
 
     let document = Document::new().set("viewBox", (0, 0, 100, 100)).add(path);
 
     svg::save("image.svg", &document).unwrap();
 }
 
-struct Drawing {
-    data: Data,
+fn arc(info: &BorderInfo) -> (u8, f64, f64) {
+    let end_angle = angle(info.start_step + info.length, info.total_steps);
+    let large_arc_flag: u8 = (info.length > (info.total_steps / 2)).into();
+    let (end_x, end_y) = cartesian_coord(info.radius, end_angle);
+
+    (large_arc_flag, end_x, end_y)
 }
 
-impl Drawing {
-    // See https://stackoverflow.com/a/75886370/3565
-    fn arc(mut self, info: BorderInfo) -> Self {
-        let end_angle = angle(info.start_step + info.length, info.total_steps);
-        let (end_x, end_y) = cartesian_coord(info.radius, end_angle);
-        let large_arc_flag: u8 = (info.length > (info.total_steps / 2)).into();
-
-        self.data = self.data.move_to(info.coord).elliptical_arc_to((
-            info.radius,
-            info.radius,
-            0,
-            large_arc_flag,
-            0,
-            end_x,
-            end_y,
-        ));
-
-        self
-    }
-
-    fn line(mut self, info: BorderInfo) -> Self {
-        let end_radius = (info.circle + info.length + 1) * RADIUS_INNER_CIRCLE;
-        let end = cartesian_coord(end_radius, info.angle);
-
-        self.data = self.data.move_to(info.coord).line_to(end);
-        self
-    }
+fn line(info: &BorderInfo) -> (f64, f64) {
+    let end_radius = (info.circle + info.length + 1) * RADIUS_INNER_CIRCLE;
+    cartesian_coord(end_radius, info.angle)
 }
 
 struct BorderInfo {
