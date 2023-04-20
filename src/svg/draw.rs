@@ -11,7 +11,7 @@ const CENTER_Y: u64 = 50;
 
 pub fn draw(borders: Vec<Border>) {
     let mut data = Data::new();
-    data = foo_borders(borders, data, &svg_data_move, &svg_data_arc, &svg_data_line);
+    data = borders_data(borders, data, &svg_data_move, &svg_data_arc, &svg_data_line);
 
     let path = Path::new()
         .set("fill", "none")
@@ -36,7 +36,7 @@ fn svg_data_line(data: Data, params: (f64, f64)) -> Data {
     data.line_to(params)
 }
 
-fn foo_borders<T>(
+fn borders_data<T>(
     borders: Vec<Border>,
     mut data: T,
     data_move: &dyn Fn(T, (f64, f64)) -> T,
@@ -50,17 +50,14 @@ fn foo_borders<T>(
         let coord = cartesian_coord(radius, angle);
 
         data = data_move(data, coord);
-        match border.border_type {
-            BorderType::Arc => {
-                data = data_arc(
-                    data,
-                    radius,
-                    arc(radius, border.start.step, total_steps, border.length),
-                );
-            }
-            BorderType::Line => {
-                data = data_line(data, line(border.start.circle, angle, border.length));
-            }
+        data = match border.border_type {
+            BorderType::Arc => data_arc(
+                data,
+                radius,
+                arc(radius, border.start.step, total_steps, border.length),
+            ),
+
+            BorderType::Line => data_line(data, line(border.start.circle, angle, border.length)),
         };
     }
 
