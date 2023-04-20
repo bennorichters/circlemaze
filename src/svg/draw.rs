@@ -13,22 +13,21 @@ pub fn draw(borders: Vec<Border>) {
     let mut data = Data::new();
 
     for border in borders {
-        let info = start_info(&border);
-        data = data.move_to(info.coord);
+        let total_steps = steps_in_circle(border.start.circle);
+        let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
+        let angle = angle(border.start.step, total_steps);
+        let coord = cartesian_coord(radius, angle);
+
+        data = data.move_to(coord);
         data = match border.border_type {
             BorderType::Arc => {
-                let params = arc(&info);
-                data.elliptical_arc_to((
-                    info.radius,
-                    info.radius,
-                    0,
-                    params.0,
-                    0,
-                    params.1,
-                    params.2,
-                ))
+                let params = arc(radius, border.start.step, total_steps, border.length);
+                data.elliptical_arc_to((radius, radius, 0, params.0, 0, params.1, params.2))
             }
-            BorderType::Line => data.line_to(line(&info)),
+            BorderType::Line => {
+                let circle = border.start.circle;
+                data.line_to(line(circle, angle, border.length))
+            }
         };
     }
 
@@ -43,46 +42,17 @@ pub fn draw(borders: Vec<Border>) {
     svg::save("image.svg", &document).unwrap();
 }
 
-fn arc(info: &BorderInfo) -> (u8, f64, f64) {
-    let end_angle = angle(info.start_step + info.length, info.total_steps);
-    let large_arc_flag: u8 = (info.length > (info.total_steps / 2)).into();
-    let (end_x, end_y) = cartesian_coord(info.radius, end_angle);
+fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, f64, f64) {
+    let end_angle = angle(start_step + length, total_steps);
+    let large_arc_flag: u8 = (length > (total_steps / 2)).into();
+    let (end_x, end_y) = cartesian_coord(radius, end_angle);
 
     (large_arc_flag, end_x, end_y)
 }
 
-fn line(info: &BorderInfo) -> (f64, f64) {
-    let end_radius = (info.circle + info.length + 1) * RADIUS_INNER_CIRCLE;
-    cartesian_coord(end_radius, info.angle)
-}
-
-struct BorderInfo {
-    circle: u32,
-    total_steps: u32,
-    start_step: u32,
-    radius: u32,
-    angle: f64,
-    coord: (f64, f64),
-    length: u32,
-}
-
-fn start_info(border: &Border) -> BorderInfo {
-    let circle = border.start.circle;
-    let total_steps = steps_in_circle(border.start.circle);
-    let start_step = border.start.step;
-    let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
-    let angle = angle(start_step, total_steps);
-    let coord = cartesian_coord(radius, angle);
-
-    BorderInfo {
-        circle,
-        total_steps,
-        start_step,
-        radius,
-        angle,
-        coord,
-        length: border.length,
-    }
+fn line(circle: u32, angle: f64, length: u32) -> (f64, f64) {
+    let end_radius = (circle + length + 1) * RADIUS_INNER_CIRCLE;
+    cartesian_coord(end_radius, angle)
 }
 
 fn angle(step: u32, total_steps: u32) -> f64 {
