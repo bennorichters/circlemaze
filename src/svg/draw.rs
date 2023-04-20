@@ -11,25 +11,7 @@ const CENTER_Y: u64 = 50;
 
 pub fn draw(borders: Vec<Border>) {
     let mut data = Data::new();
-
-    for border in borders {
-        let total_steps = steps_in_circle(border.start.circle);
-        let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
-        let angle = angle(border.start.step, total_steps);
-        let coord = cartesian_coord(radius, angle);
-
-        data = data.move_to(coord);
-        data = match border.border_type {
-            BorderType::Arc => {
-                let params = arc(radius, border.start.step, total_steps, border.length);
-                data.elliptical_arc_to((radius, radius, 0, params.0, 0, params.1, params.2))
-            }
-            BorderType::Line => {
-                let circle = border.start.circle;
-                data.line_to(line(circle, angle, border.length))
-            }
-        };
-    }
+    data = foo_borders(borders, data, &svg_data_move, &svg_data_arc, &svg_data_line);
 
     let path = Path::new()
         .set("fill", "none")
@@ -40,6 +22,49 @@ pub fn draw(borders: Vec<Border>) {
     let document = Document::new().set("viewBox", (0, 0, 100, 100)).add(path);
 
     svg::save("image.svg", &document).unwrap();
+}
+
+fn svg_data_move(data: Data, coord: (f64, f64)) -> Data {
+    data.move_to(coord)
+}
+
+fn svg_data_arc(data: Data, radius: u32, params: (u8, f64, f64)) -> Data {
+    data.elliptical_arc_to((radius, radius, 0, params.0, 0, params.1, params.2))
+}
+
+fn svg_data_line(data: Data, params: (f64, f64)) -> Data {
+    data.line_to(params)
+}
+
+fn foo_borders<T>(
+    borders: Vec<Border>,
+    mut data: T,
+    data_move: &dyn Fn(T, (f64, f64)) -> T,
+    data_arc: &dyn Fn(T, u32, (u8, f64, f64)) -> T,
+    data_line: &dyn Fn(T, (f64, f64)) -> T,
+) -> T {
+    for border in borders {
+        let total_steps = steps_in_circle(border.start.circle);
+        let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
+        let angle = angle(border.start.step, total_steps);
+        let coord = cartesian_coord(radius, angle);
+
+        data = data_move(data, coord);
+        match border.border_type {
+            BorderType::Arc => {
+                data = data_arc(
+                    data,
+                    radius,
+                    arc(radius, border.start.step, total_steps, border.length),
+                );
+            }
+            BorderType::Line => {
+                data = data_line(data, line(border.start.circle, angle, border.length));
+            }
+        };
+    }
+
+    data
 }
 
 fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, f64, f64) {
