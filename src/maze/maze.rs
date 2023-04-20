@@ -6,16 +6,14 @@ pub struct CircleCoordinate {
     pub step: u32,
 }
 
-pub enum Direction {
-    In,
-    Out,
-    Clockwise,
-    CounterClockwise,
+pub enum BorderType {
+    Line,
+    Arc,
 }
 
 pub struct Border {
+    pub border_type: BorderType,
     pub start: CircleCoordinate,
-    pub direction: Direction,
     pub length: u32,
 }
 
