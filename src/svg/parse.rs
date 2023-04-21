@@ -5,28 +5,30 @@ const RADIUS_INNER_CIRCLE: u32 = 20;
 const CENTER_X: u64 = 50;
 const CENTER_Y: u64 = 50;
 
-pub fn parse<T>(
-    borders: Vec<Border>,
-    mut data: T,
-    data_move: &dyn Fn(T, (f64, f64)) -> T,
-    data_arc: &dyn Fn(T, u32, (u8, f64, f64)) -> T,
-    data_line: &dyn Fn(T, (f64, f64)) -> T,
-) -> T {
+pub trait Canvas<T> {
+    fn data_move(&mut self, data: T, coord: (f64, f64)) -> T;
+    fn data_arc(&mut self, data: T, radius: u32, params: (u8, f64, f64)) -> T;
+    fn data_line(&mut self, data: T, params: (f64, f64)) -> T;
+}
+
+pub fn parse<T, K: Canvas<T>>(borders: Vec<Border>, mut data: T, mut canvas: K) -> T {
     for border in borders {
         let total_steps = steps_in_circle(border.start.circle);
         let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
         let angle = angle(border.start.step, total_steps);
         let coord = cartesian_coord(radius, angle);
 
-        data = data_move(data, coord);
+        data = canvas.data_move(data, coord);
         data = match border.border_type {
-            BorderType::Arc => data_arc(
+            BorderType::Arc => canvas.data_arc(
                 data,
                 radius,
                 arc(radius, border.start.step, total_steps, border.length),
             ),
 
-            BorderType::Line => data_line(data, line(border.start.circle, angle, border.length)),
+            BorderType::Line => {
+                canvas.data_line(data, line(border.start.circle, angle, border.length))
+            }
         };
     }
 
