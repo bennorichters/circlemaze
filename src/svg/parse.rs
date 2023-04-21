@@ -5,10 +5,12 @@ const RADIUS_INNER_CIRCLE: u32 = 20;
 const CENTER_X: u64 = 50;
 const CENTER_Y: u64 = 50;
 
+pub type CartesianCoord = (f64, f64);
+
 pub trait Canvas {
-    fn move_to(self, coord: (f64, f64)) -> Self;
-    fn draw_arc(self, radius: u32, params: (u8, f64, f64)) -> Self;
-    fn draw_line(self, params: (f64, f64)) -> Self;
+    fn move_to(self, coord: CartesianCoord) -> Self;
+    fn draw_arc(self, radius: u32, long_arc_flag: u8, coord: CartesianCoord) -> Self;
+    fn draw_line(self, coord: CartesianCoord) -> Self;
 }
 
 pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
@@ -20,10 +22,11 @@ pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
 
         canvas = canvas.move_to(coord);
         canvas = match border.border_type {
-            BorderType::Arc => canvas.draw_arc(
-                radius,
-                arc(radius, border.start.step, total_steps, border.length),
-            ),
+            BorderType::Arc => {
+                let (long_arc_flag, coord) =
+                    arc(radius, border.start.step, total_steps, border.length);
+                canvas.draw_arc(radius, long_arc_flag, coord)
+            }
 
             BorderType::Line => canvas.draw_line(line(border.start.circle, angle, border.length)),
         };
@@ -32,12 +35,12 @@ pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
     canvas
 }
 
-fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, f64, f64) {
+fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, CartesianCoord) {
     let end_angle = angle(start_step + length, total_steps);
     let large_arc_flag: u8 = (length > (total_steps / 2)).into();
-    let (end_x, end_y) = cartesian_coord(radius, end_angle);
+    let coord = cartesian_coord(radius, end_angle);
 
-    (large_arc_flag, end_x, end_y)
+    (large_arc_flag, coord)
 }
 
 fn line(circle: u32, angle: f64, length: u32) -> (f64, f64) {
