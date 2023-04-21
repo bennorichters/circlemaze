@@ -25,18 +25,18 @@ struct SvgCanvas {
 }
 
 impl Canvas for SvgCanvas {
-    fn data_move(mut self, coord: (f64, f64)) -> Self {
+    fn move_to(mut self, coord: (f64, f64)) -> Self {
         self.data = self.data.move_to(coord);
         self
     }
 
-    fn data_arc(mut self, radius: u32, params: (u8, f64, f64)) -> Self {
+    fn draw_arc(mut self, radius: u32, params: (u8, f64, f64)) -> Self {
         self.data = self.data
             .elliptical_arc_to((radius, radius, 0, params.0, 0, params.1, params.2));
         self
     }
 
-    fn data_line(mut self, params: (f64, f64)) -> Self {
+    fn draw_line(mut self, params: (f64, f64)) -> Self {
         self.data = self.data.line_to(params);
         self
     }

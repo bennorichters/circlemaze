@@ -6,9 +6,9 @@ const CENTER_X: u64 = 50;
 const CENTER_Y: u64 = 50;
 
 pub trait Canvas {
-    fn data_move(self, coord: (f64, f64)) -> Self;
-    fn data_arc(self, radius: u32, params: (u8, f64, f64)) -> Self;
-    fn data_line(self, params: (f64, f64)) -> Self;
+    fn move_to(self, coord: (f64, f64)) -> Self;
+    fn draw_arc(self, radius: u32, params: (u8, f64, f64)) -> Self;
+    fn draw_line(self, params: (f64, f64)) -> Self;
 }
 
 pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
@@ -18,14 +18,14 @@ pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
         let angle = angle(border.start.step, total_steps);
         let coord = cartesian_coord(radius, angle);
 
-        canvas = canvas.data_move(coord);
+        canvas = canvas.move_to(coord);
         canvas = match border.border_type {
-            BorderType::Arc => canvas.data_arc(
+            BorderType::Arc => canvas.draw_arc(
                 radius,
                 arc(radius, border.start.step, total_steps, border.length),
             ),
 
-            BorderType::Line => canvas.data_line(line(border.start.circle, angle, border.length)),
+            BorderType::Line => canvas.draw_line(line(border.start.circle, angle, border.length)),
         };
     }
 
