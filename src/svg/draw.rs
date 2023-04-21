@@ -7,9 +7,7 @@ use crate::maze::maze::Border;
 use super::parse::{parse, Canvas};
 
 pub fn draw(borders: Vec<Border>) {
-    let data = Data::new();
-    let canvas = SvgCanvas { data };
-    let canvas = parse(borders, canvas);
+    let canvas = parse(borders, SvgCanvas { data: Data::new() });
 
     let path = Path::new()
         .set("d", canvas.data)
