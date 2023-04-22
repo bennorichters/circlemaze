@@ -112,6 +112,12 @@ mod parse_tests {
     }
 
     impl DataHolder {
+        fn test_coord(self, actual: CartesianCoord, expected: CartesianCoord) -> Self {
+            assert!(abs_diff_eq!(actual.0, expected.0, epsilon = EPSILON));
+            assert!(abs_diff_eq!(actual.1, expected.1, epsilon = EPSILON));
+            self.end()
+        }
+
         fn end(mut self) -> Self {
             self.index += 1;
             self
@@ -121,11 +127,9 @@ mod parse_tests {
     impl Canvas for DataHolder {
         fn move_to(self, coord: CartesianCoord) -> Self {
             if let Param::Move(exp_coord) = self.params[self.index] {
-                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
-                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
-
-                return self.end();
+                return self.test_coord(coord, exp_coord);
             }
+
             panic!();
         }
 
@@ -133,20 +137,14 @@ mod parse_tests {
             if let Param::Arc(exp_radius, exp_flag, exp_coord) = self.params[self.index] {
                 assert_eq!(radius, exp_radius);
                 assert_eq!(long_arc_flag, exp_flag);
-                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
-                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
-
-                return self.end();
+                return self.test_coord(coord, exp_coord);
             }
             panic!();
         }
 
         fn draw_line(self, coord: CartesianCoord) -> Self {
             if let Param::Line(exp_coord) = self.params[self.index] {
-                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
-                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
-
-                return self.end();
+                return self.test_coord(coord, exp_coord);
             }
             panic!()
         }
