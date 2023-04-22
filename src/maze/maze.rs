@@ -17,7 +17,7 @@ pub struct Border {
     pub length: u32,
 }
 
-fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
+fn _all_coords(circles: u32) -> Vec<CircleCoordinate> {
     let mut result: Vec<CircleCoordinate> = Vec::new();
 
     for circle in 0..circles {

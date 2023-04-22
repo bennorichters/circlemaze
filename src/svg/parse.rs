@@ -58,3 +58,93 @@ fn cartesian_coord(radius: u32, angle: f64) -> (f64, f64) {
         CENTER_Y as f64 - radius as f64 * angle.sin(),
     )
 }
+
+#[cfg(test)]
+mod parse_tests {
+    extern crate approx;
+
+    use approx::abs_diff_eq;
+
+    use crate::{
+        maze::maze::{Border, BorderType, CircleCoordinate},
+        svg::parse::{parse, Canvas},
+    };
+
+    use super::CartesianCoord;
+
+    const EPSILON: f64 = 0.00001;
+
+    enum Param {
+        Move(CartesianCoord),
+        Arc(u32, u8, CartesianCoord),
+        Line(CartesianCoord),
+    }
+
+    struct DataHolder {
+        params: Vec<Param>,
+        index: usize,
+    }
+
+    impl Canvas for DataHolder {
+        fn move_to(mut self, coord: CartesianCoord) -> Self {
+            if let Param::Move(exp_coord) = self.params[self.index] {
+                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
+                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
+
+                self.index += 1;
+                return self;
+            }
+            panic!();
+        }
+
+        fn draw_arc(mut self, radius: u32, long_arc_flag: u8, coord: CartesianCoord) -> Self {
+            if let Param::Arc(exp_radius, exp_flag, exp_coord) = self.params[self.index] {
+                assert_eq!(radius, exp_radius);
+                assert_eq!(long_arc_flag, exp_flag);
+                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
+                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
+
+                self.index += 1;
+                return self;
+            }
+            panic!();
+        }
+
+        fn draw_line(mut self, coord: CartesianCoord) -> Self {
+            if let Param::Line(exp_coord) = self.params[self.index] {
+                assert!(abs_diff_eq!(coord.0, exp_coord.0, epsilon = EPSILON));
+                assert!(abs_diff_eq!(coord.1, exp_coord.1, epsilon = EPSILON));
+
+                self.index += 1;
+                return self;
+            }
+            panic!()
+        }
+    }
+
+    #[test]
+    fn test_parse() {
+        let b0 = Border {
+            border_type: BorderType::Arc,
+            start: CircleCoordinate { circle: 0, step: 0 },
+            length: 3,
+        };
+        let b1 = Border {
+            border_type: BorderType::Line,
+            start: CircleCoordinate { circle: 0, step: 2 },
+            length: 1,
+        };
+        parse(
+            vec![b0, b1],
+            DataHolder {
+                params: vec![
+                    Param::Move((70., 50.)),
+                    Param::Arc(20, 1, (33.81966, 61.755707)),
+                    Param::Move((33.81966, 38.244293)),
+                    Param::Line((17.63932, 26.48859)),
+                ],
+                index: 0,
+            },
+        );
+    }
+}
