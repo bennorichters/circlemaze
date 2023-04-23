@@ -10,4 +10,4 @@ Cargo.lock
 **/*.rs.bk
 
 # Test output
-image.svg
+maze.svg

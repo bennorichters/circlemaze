@@ -6,6 +6,7 @@ pub struct CircleCoordinate {
     pub step: u32,
 }
 
+#[derive(PartialEq)]
 pub enum BorderType {
     Line,
     Arc,
