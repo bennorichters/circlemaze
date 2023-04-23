@@ -18,28 +18,29 @@ pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
         let total_steps = steps_in_circle(border.start.circle);
         let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
 
-        if border.border_type == BorderType::Arc && total_steps == border.length {
-            canvas = canvas.draw_circle(radius, CENTER);
+        canvas = if border.border_type == BorderType::Arc && total_steps == border.length {
+            canvas.draw_circle(radius, CENTER)
         } else {
-            let angle = angle(border.start.step, total_steps);
-            let coord = cartesian_coord(radius, angle);
-
-            canvas = canvas.move_to(coord);
-            canvas = match border.border_type {
-                BorderType::Arc => {
-                    let (long_arc_flag, coord) =
-                        arc(radius, border.start.step, total_steps, border.length);
-                    canvas.draw_arc(radius, long_arc_flag, coord)
-                }
-
-                BorderType::Line => {
-                    canvas.draw_line(line(border.start.circle, angle, border.length))
-                }
-            };
-        }
+            arc_or_line(border, total_steps, radius, canvas)
+        };
     }
 
     canvas
+}
+
+fn arc_or_line<T: Canvas>(border: Border, total_steps: u32, radius: u32, mut canvas: T) -> T {
+    let angle = angle(border.start.step, total_steps);
+    let coord = cartesian_coord(radius, angle);
+
+    canvas = canvas.move_to(coord);
+    match border.border_type {
+        BorderType::Arc => {
+            let (long_arc_flag, coord) = arc(radius, border.start.step, total_steps, border.length);
+            canvas.draw_arc(radius, long_arc_flag, coord)
+        }
+
+        BorderType::Line => canvas.draw_line(line(border.start.circle, angle, border.length)),
+    }
 }
 
 fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, CartesianCoord) {
