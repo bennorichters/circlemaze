@@ -16,7 +16,6 @@ pub fn draw(borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
 
     let mut data: HashMap<String, String> = HashMap::new();
     data.insert("path".to_string(), canvas.path);
-    println!("{:?}", canvas.circle.is_some());
     if let Some(circle) = canvas.circle {
         data.insert("circle_center_x".to_string(), circle.center_x);
         data.insert("circle_center_y".to_string(), circle.center_y);
