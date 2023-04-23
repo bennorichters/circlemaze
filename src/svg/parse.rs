@@ -154,6 +154,7 @@ mod parse_tests {
                 assert_eq!(long_arc_flag, exp_flag);
                 return self.test_coord(coord, exp_coord);
             }
+
             panic!();
         }
 
@@ -171,6 +172,7 @@ mod parse_tests {
             if let Param::Line(exp_coord) = self.params[self.index] {
                 return self.test_coord(coord, exp_coord);
             }
+
             panic!()
         }
     }
