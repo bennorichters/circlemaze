@@ -7,8 +7,11 @@
 
   <path d="{{path}}" fill="none" stroke="black" stroke-width="1"/>
 
-  {{#if circle}}
-    <circle cx="" cy="" r="" />
+  {{#if circle_center_x}}
+    <circle 
+      cx="{{circle_center_x}}" cy="{{circle_center_y}}" r="{{circle_radius}}" 
+      stroke="black" stroke-width="1" fill="none"
+    />
   {{/if}}
 
 </svg>

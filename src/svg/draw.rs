@@ -6,14 +6,24 @@ use crate::maze::maze::Border;
 use super::parse::{parse, Canvas, CartesianCoord};
 
 pub fn draw(borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
-    let canvas = parse(borders, SvgCanvas { path: String::new() });
-
-    let mut handlebars = Handlebars::new();
+    let canvas = parse(
+        borders,
+        SvgCanvas {
+            path: String::new(),
+            circle: None,
+        },
+    );
 
     let mut data: HashMap<String, String> = HashMap::new();
     data.insert("path".to_string(), canvas.path);
-    data.insert("circle".to_string(), "".to_string());
+    println!("{:?}", canvas.circle.is_some());
+    if let Some(circle) = canvas.circle {
+        data.insert("circle_center_x".to_string(), circle.center_x);
+        data.insert("circle_center_y".to_string(), circle.center_y);
+        data.insert("circle_radius".to_string(), circle.radius);
+    }
 
+    let mut handlebars = Handlebars::new();
     handlebars
         .register_template_file("t1", "./assets/maze.template.svg")
         .unwrap();
@@ -23,8 +33,15 @@ pub fn draw(borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+struct Circle {
+    center_x: String,
+    center_y: String,
+    radius: String,
+}
+
 struct SvgCanvas {
     path: String,
+    circle: Option<Circle>,
 }
 
 impl Canvas for SvgCanvas {
@@ -42,9 +59,11 @@ impl Canvas for SvgCanvas {
     }
 
     fn draw_circle(mut self, radius: u32, center: CartesianCoord) -> Self {
-        self = self.move_to((center.0 + radius as f64, center.1));
-        self = self.draw_arc(radius, 0, (center.0 - radius as f64, center.1));
-        self = self.draw_arc(radius, 0, (center.0 + radius as f64, center.1));
+        self.circle = Some(Circle {
+            center_x: center.0.to_string(),
+            center_y: center.1.to_string(),
+            radius: radius.to_string(),
+        });
         self
     }
 
