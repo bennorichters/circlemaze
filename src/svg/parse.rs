@@ -1,4 +1,4 @@
-use crate::maze::maze::{steps_in_circle, Border, BorderType};
+use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 const RADIUS_INNER_CIRCLE: u32 = 20;
@@ -15,44 +15,49 @@ pub trait Canvas {
 
 pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
     for border in borders {
-        let total_steps = steps_in_circle(border.start.circle);
         let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
 
-        canvas = if border.border_type == BorderType::Arc && total_steps == border.length {
+        canvas = if border.border_type == BorderType::Arc && border.start == border.end {
             canvas.draw_circle(radius, CENTER)
         } else {
-            arc_or_line(border, total_steps, radius, canvas)
+            arc_or_line(border, radius, canvas)
         };
     }
 
     canvas
 }
 
-fn arc_or_line<T: Canvas>(border: Border, total_steps: u32, radius: u32, mut canvas: T) -> T {
+fn arc_or_line<T: Canvas>(border: Border, radius: u32, mut canvas: T) -> T {
+    let total_steps = steps_in_circle(border.start.circle);
     let angle = angle(border.start.step, total_steps);
     let coord = cartesian_coord(radius, angle);
 
     canvas = canvas.move_to(coord);
     match border.border_type {
         BorderType::Arc => {
-            let (long_arc_flag, coord) = arc(radius, border.start.step, total_steps, border.length);
+            let (long_arc_flag, coord) = arc(radius, border.start.step, total_steps, border.end);
             canvas.draw_arc(radius, long_arc_flag, coord)
         }
 
-        BorderType::Line => canvas.draw_line(line(border.start.circle, angle, border.length)),
+        BorderType::Line => canvas.draw_line(line(angle, border.end)),
     }
 }
 
-fn arc(radius: u32, start_step: u32, total_steps: u32, length: u32) -> (u8, CartesianCoord) {
-    let end_angle = angle(start_step + length, total_steps);
-    let large_arc_flag: u8 = (length > (total_steps / 2)).into();
-    let coord = cartesian_coord(radius, end_angle);
+fn arc(
+    radius: u32,
+    start_step: u32,
+    total_steps: u32,
+    end: CircleCoordinate,
+) -> (u8, CartesianCoord) {
+    let end_angle = angle(end.step, total_steps);
+    let large_arc_flag: u8 = ((end.step - start_step) > (total_steps / 2)).into();
+    let end_coord = cartesian_coord(radius, end_angle);
 
-    (large_arc_flag, coord)
+    (large_arc_flag, end_coord)
 }
 
-fn line(circle: u32, angle: f64, length: u32) -> (f64, f64) {
-    let end_radius = (circle + length + 1) * RADIUS_INNER_CIRCLE;
+fn line(angle: f64, end: CircleCoordinate) -> (f64, f64) {
+    let end_radius = (end.circle + 1) * RADIUS_INNER_CIRCLE;
     cartesian_coord(end_radius, angle)
 }
 
@@ -86,17 +91,17 @@ mod parse_tests {
             Border {
                 border_type: BorderType::Arc,
                 start: CircleCoordinate { circle: 0, step: 0 },
-                length: 3,
+                end: CircleCoordinate { circle: 0, step: 3 },
             },
             Border {
                 border_type: BorderType::Line,
                 start: CircleCoordinate { circle: 0, step: 2 },
-                length: 1,
+                end: CircleCoordinate { circle: 1, step: 2 },
             },
             Border {
                 border_type: BorderType::Arc,
                 start: CircleCoordinate { circle: 2, step: 0 },
-                length: 15,
+                end: CircleCoordinate { circle: 2, step: 0 },
             },
         ];
         let expected = DataHolder {

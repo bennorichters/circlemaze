@@ -15,7 +15,7 @@ pub enum BorderType {
 pub struct Border {
     pub border_type: BorderType,
     pub start: CircleCoordinate,
-    pub length: u32,
+    pub end: CircleCoordinate,
 }
 
 fn _all_coords(circles: u32) -> Vec<CircleCoordinate> {

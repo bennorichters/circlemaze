@@ -9,17 +9,17 @@ fn main() {
         Border {
             border_type: BorderType::Arc,
             start: CircleCoordinate { circle: 0, step: 0 },
-            length: 3,
+            end: CircleCoordinate { circle: 0, step: 3 },
         },
         Border {
             border_type: BorderType::Line,
             start: CircleCoordinate { circle: 0, step: 2 },
-            length: 1,
+            end: CircleCoordinate { circle: 1, step: 2 },
         },
         Border {
             border_type: BorderType::Arc,
             start: CircleCoordinate { circle: 1, step: 0 },
-            length: 10,
+            end: CircleCoordinate { circle: 1, step: 0 },
         },
     ];
 
