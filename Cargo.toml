@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 approx = "0.5.1"
 handlebars = "4.3.6"
+rand = "0.8.5"

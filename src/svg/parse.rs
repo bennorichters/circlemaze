@@ -2,7 +2,7 @@ use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 const RADIUS_INNER_CIRCLE: u32 = 20;
-const CENTER: CartesianCoord = (50., 50.);
+const CENTER: CartesianCoord = (400., 400.);
 
 pub type CartesianCoord = (f64, f64);
 
@@ -17,7 +17,7 @@ pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
     for border in borders {
         let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
 
-        canvas = if border.border_type == BorderType::Arc && border.start == border.end {
+        canvas = if border.border_type() == BorderType::Arc && border.start == border.end {
             canvas.draw_circle(radius, CENTER)
         } else {
             arc_or_line(border, radius, canvas)
@@ -33,7 +33,7 @@ fn arc_or_line<T: Canvas>(border: Border, radius: u32, mut canvas: T) -> T {
     let coord = cartesian_coord(radius, angle);
 
     canvas = canvas.move_to(coord);
-    match border.border_type {
+    match border.border_type() {
         BorderType::Arc => {
             let (long_arc_flag, coord) = arc(radius, border.start.step, total_steps, border.end);
             canvas.draw_arc(radius, long_arc_flag, coord)
@@ -79,7 +79,7 @@ mod parse_tests {
     use approx::abs_diff_eq;
 
     use crate::{
-        maze::maze::{Border, BorderType, CircleCoordinate},
+        maze::maze::{Border, CircleCoordinate},
         svg::parse::{parse, Canvas},
     };
 
@@ -89,17 +89,14 @@ mod parse_tests {
     fn test_parse() {
         let path = vec![
             Border {
-                border_type: BorderType::Arc,
                 start: CircleCoordinate { circle: 0, step: 0 },
                 end: CircleCoordinate { circle: 0, step: 3 },
             },
             Border {
-                border_type: BorderType::Line,
                 start: CircleCoordinate { circle: 0, step: 2 },
                 end: CircleCoordinate { circle: 1, step: 2 },
             },
             Border {
-                border_type: BorderType::Arc,
                 start: CircleCoordinate { circle: 2, step: 0 },
                 end: CircleCoordinate { circle: 2, step: 0 },
             },
