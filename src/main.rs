@@ -5,6 +5,6 @@ mod maze;
 mod svg;
 
 fn main() {
-    let borders = create_maze(3);
+    let borders = create_maze(15);
     _ = draw::draw(borders);
 }

@@ -2,7 +2,7 @@ use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 const RADIUS_INNER_CIRCLE: u32 = 20;
-const CENTER: CartesianCoord = (100., 100.);
+const CENTER: CartesianCoord = (400., 350.);
 
 pub type CartesianCoord = (f64, f64);
 
