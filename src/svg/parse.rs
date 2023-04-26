@@ -2,7 +2,7 @@ use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 const RADIUS_INNER_CIRCLE: u32 = 20;
-const CENTER: CartesianCoord = (400., 400.);
+const CENTER: CartesianCoord = (100., 100.);
 
 pub type CartesianCoord = (f64, f64);
 
@@ -50,7 +50,12 @@ fn arc(
     end: CircleCoordinate,
 ) -> (u8, CartesianCoord) {
     let end_angle = angle(end.step, total_steps);
-    let large_arc_flag: u8 = ((end.step - start_step) > (total_steps / 2)).into();
+    let diff = if end.step >= start_step {
+        end.step - start_step
+    } else {
+        total_steps - start_step + end.step
+    };
+    let large_arc_flag: u8 = (diff > (total_steps / 2)).into();
     let end_coord = cartesian_coord(radius, end_angle);
 
     (large_arc_flag, end_coord)

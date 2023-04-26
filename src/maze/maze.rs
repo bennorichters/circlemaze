@@ -1,5 +1,3 @@
-use std::usize;
-
 const INNER_CIRCLE_PARTS: u32 = 5;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -47,17 +45,25 @@ pub fn create_maze(circles: u32) -> Vec<Border> {
     maze_factory.maze.borders
 }
 
-enum StartEnd {
-    Start,
-    End,
-}
-
 struct Maze {
     outer_circle: u32,
     borders: Vec<Border>,
 }
 
 impl Maze {
+    fn close_outer_circle(&mut self) {
+        self.borders.push(Border {
+            start: CircleCoordinate {
+                circle: self.outer_circle,
+                step: 0,
+            },
+            end: CircleCoordinate {
+                circle: self.outer_circle,
+                step: 0,
+            },
+        });
+    }
+
     fn create_path(
         &mut self,
         start_coord: &CircleCoordinate,
@@ -72,17 +78,11 @@ impl Maze {
             coord = to_coord.to_owned();
             current_path.push(to_coord.to_owned());
             match direction {
-                Direction::In => {
-                    self.merge_borders(from_coord, to_coord, BorderType::Line, StartEnd::End)
-                }
-                Direction::Out => {
-                    self.merge_borders(from_coord, to_coord, BorderType::Line, StartEnd::Start)
-                }
-                Direction::Clockwise => {
-                    self.merge_borders(from_coord, to_coord, BorderType::Arc, StartEnd::End)
-                }
+                Direction::Out => self.merge_borders(from_coord, to_coord, BorderType::Line),
+                Direction::In => self.merge_borders(to_coord, from_coord, BorderType::Line),
+                Direction::Clockwise => self.merge_borders(from_coord, to_coord, BorderType::Arc),
                 Direction::CounterClockwise => {
-                    self.merge_borders(from_coord, to_coord, BorderType::Arc, StartEnd::Start)
+                    self.merge_borders(to_coord, from_coord, BorderType::Arc)
                 }
             };
         }
@@ -110,42 +110,47 @@ impl Maze {
 
     fn merge_borders(
         &mut self,
-        from_coord: CircleCoordinate,
-        to_coord: CircleCoordinate,
+        start: CircleCoordinate,
+        end: CircleCoordinate,
         border_type: BorderType,
-        start_end: StartEnd,
     ) {
-        let pos_option = match start_end {
-            StartEnd::Start => self
-                .borders
-                .iter()
-                .position(|b| b.border_type() == border_type && b.start == to_coord),
-            StartEnd::End => self
-                .borders
-                .iter()
-                .position(|b| b.border_type() == border_type && b.end == to_coord),
-        };
+        let mut merged_start = start;
+        let mut merged_end = end;
 
-        if let Some(pos) = pos_option {
-            let old = self.borders.remove(pos);
-            match start_end {
-                StartEnd::Start => {
-                    self.borders.push(Border {
-                        start: from_coord,
-                        end: old.end,
-                    });
-                }
-                StartEnd::End => self.borders.push(Border {
-                    start: old.start,
-                    end: from_coord,
-                }),
-            };
-        } else {
-            self.borders.push(Border {
-                start: from_coord,
-                end: to_coord,
-            });
+        if let Some(before_index) = self.find_merge_start(&merged_start, &border_type) {
+            let before = self.borders.remove(before_index);
+            merged_start = before.start;
         }
+
+        if let Some(after_index) = self.find_merge_end(&merged_end, &border_type) {
+            let after = self.borders.remove(after_index);
+            merged_end = after.end;
+        }
+
+        self.borders.push(Border {
+            start: merged_start,
+            end: merged_end,
+        });
+    }
+
+    fn find_merge_start(
+        &self,
+        from_coord: &CircleCoordinate,
+        border_type: &BorderType,
+    ) -> Option<usize> {
+        self.borders
+            .iter()
+            .position(|b| &b.border_type() == border_type && &b.end == from_coord)
+    }
+
+    fn find_merge_end(
+        &self,
+        to_coord: &CircleCoordinate,
+        border_type: &BorderType,
+    ) -> Option<usize> {
+        self.borders
+            .iter()
+            .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
 
     fn neighbour(
@@ -155,23 +160,25 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::In => {
-                if coord.circle == 0 {
+                if coord.circle == 0 || (coord.circle * coord.step) % (coord.circle + 1) != 0 {
                     None
                 } else {
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
-                        step: coord.step,
+                        step: (coord.circle * coord.step) / (coord.circle + 1),
                     })
                 }
             }
 
             Direction::Out => {
-                if coord.circle == (self.outer_circle - 1) {
+                if coord.circle == self.outer_circle
+                    || ((coord.circle + 2) * coord.step) % (coord.circle + 1) != 0
+                {
                     None
                 } else {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
-                        step: coord.step,
+                        step: ((coord.circle + 2) * coord.step) / (coord.circle + 1),
                     })
                 }
             }
@@ -213,12 +220,12 @@ struct MazeFactory {
 
 impl MazeFactory {
     fn create(&mut self) {
-        // while !self.open_coords.is_empty() {
+        self.maze.close_outer_circle();
+        while !self.open_coords.is_empty() {
             let coord = &self.open_coords[random_index(self.open_coords.len())];
             let path_coords = self.maze.create_path(coord, &self.open_coords);
             self.open_coords.retain(|e| !path_coords.contains(e));
-            println!("{:?}", self.maze.borders);
-        // }
+        }
     }
 }
 
@@ -235,8 +242,8 @@ fn random_index(length: usize) -> usize {
 
 #[derive(Debug)]
 enum Direction {
-    In,
     Out,
+    In,
     Clockwise,
     CounterClockwise,
 }
@@ -244,7 +251,7 @@ enum Direction {
 fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
     let mut result: Vec<CircleCoordinate> = Vec::new();
 
-    for circle in 0..(circles - 1) {
+    for circle in 0..circles {
         for step in 0..steps_in_circle(circle) {
             result.push(CircleCoordinate { circle, step });
         }
