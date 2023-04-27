@@ -18,6 +18,14 @@ pub struct Border {
     pub end: CircleCoordinate,
 }
 
+// #[derive(Debug)]
+// pub enum Border {
+//     Arc(CircleCoordinate, CircleCoordinate),
+//     LineGrid(CircleCoordinate, CircleCoordinate),
+//     LineIn(CircleCoordinate),
+//     LineOut(CircleCoordinate),
+// }
+
 impl Border {
     pub fn border_type(&self) -> BorderType {
         if self.start.circle == self.end.circle {
@@ -32,17 +40,32 @@ pub fn steps_in_circle(circle: u32) -> u32 {
     (circle + 1) * INNER_CIRCLE_PARTS
 }
 
-pub fn create_maze(circles: u32) -> Vec<Border> {
-    let mut maze_factory = MazeFactory {
-        maze: Maze {
-            outer_circle: circles,
-            borders: Vec::new(),
-        },
-        open_coords: all_coords(circles),
-    };
+fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
+    let mut result: Vec<CircleCoordinate> = Vec::new();
 
-    maze_factory.create();
-    maze_factory.maze.borders
+    for circle in 0..circles {
+        for step in 0..steps_in_circle(circle) {
+            result.push(CircleCoordinate { circle, step });
+        }
+    }
+
+    result
+}
+
+pub fn create_maze(circles: u32) -> Vec<Border> {
+    let mut maze = Maze {
+        outer_circle: circles,
+        borders: Vec::new(),
+    };
+    let mut open_coords = all_coords(circles);
+
+    maze.close_outer_circle();
+    while !open_coords.is_empty() {
+        let coord = &open_coords[random_index(open_coords.len())];
+        let path_coords = maze.create_path(coord, &open_coords);
+        open_coords.retain(|e| !path_coords.contains(e));
+    }
+    maze.borders
 }
 
 struct Maze {
@@ -213,22 +236,6 @@ impl Maze {
     }
 }
 
-struct MazeFactory {
-    maze: Maze,
-    open_coords: Vec<CircleCoordinate>,
-}
-
-impl MazeFactory {
-    fn create(&mut self) {
-        self.maze.close_outer_circle();
-        while !self.open_coords.is_empty() {
-            let coord = &self.open_coords[random_index(self.open_coords.len())];
-            let path_coords = self.maze.create_path(coord, &self.open_coords);
-            self.open_coords.retain(|e| !path_coords.contains(e));
-        }
-    }
-}
-
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
     options.push((coord.to_owned(), Direction::In));
     options.push((coord.to_owned(), Direction::Out));
@@ -246,16 +253,4 @@ enum Direction {
     In,
     Clockwise,
     CounterClockwise,
-}
-
-fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
-    let mut result: Vec<CircleCoordinate> = Vec::new();
-
-    for circle in 0..circles {
-        for step in 0..steps_in_circle(circle) {
-            result.push(CircleCoordinate { circle, step });
-        }
-    }
-
-    result
 }
