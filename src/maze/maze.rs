@@ -8,30 +8,41 @@ pub struct CircleCoordinate {
 
 #[derive(PartialEq)]
 pub enum BorderType {
-    Line,
     Arc,
+    Line,
 }
 
 #[derive(Debug)]
-pub struct Border {
-    pub start: CircleCoordinate,
-    pub end: CircleCoordinate,
+pub enum Border {
+    Arc(CircleCoordinate, CircleCoordinate),
+    LineGrid(CircleCoordinate, CircleCoordinate),
+    LineIn(CircleCoordinate),
+    LineOut(CircleCoordinate),
 }
-
-// #[derive(Debug)]
-// pub enum Border {
-//     Arc(CircleCoordinate, CircleCoordinate),
-//     LineGrid(CircleCoordinate, CircleCoordinate),
-//     LineIn(CircleCoordinate),
-//     LineOut(CircleCoordinate),
-// }
 
 impl Border {
     pub fn border_type(&self) -> BorderType {
-        if self.start.circle == self.end.circle {
-            BorderType::Arc
-        } else {
-            BorderType::Line
+        match *self {
+            Border::Arc(_, _) => BorderType::Arc,
+            _ => BorderType::Line,
+        }
+    }
+
+    pub fn start(&self) -> &CircleCoordinate {
+        match self {
+            Border::Arc(result, _) => result,
+            Border::LineGrid(result, _) => result,
+            Border::LineIn(result) => result,
+            Border::LineOut(result) => result,
+        }
+    }
+
+    pub fn end(&self) -> &CircleCoordinate {
+        match self {
+            Border::Arc(_, result) => result,
+            Border::LineGrid(_, result) => result,
+            Border::LineIn(_) => panic!(),
+            Border::LineOut(_) => panic!(),
         }
     }
 }
@@ -75,16 +86,16 @@ struct Maze {
 
 impl Maze {
     fn close_outer_circle(&mut self) {
-        self.borders.push(Border {
-            start: CircleCoordinate {
+        self.borders.push(Border::Arc(
+            CircleCoordinate {
                 circle: self.outer_circle,
                 step: 0,
             },
-            end: CircleCoordinate {
+            CircleCoordinate {
                 circle: self.outer_circle,
                 step: 0,
             },
-        });
+        ));
     }
 
     fn create_path(
@@ -142,17 +153,17 @@ impl Maze {
 
         if let Some(before_index) = self.find_merge_start(&merged_start, &border_type) {
             let before = self.borders.remove(before_index);
-            merged_start = before.start;
+            merged_start = before.start().to_owned();
         }
 
         if let Some(after_index) = self.find_merge_end(&merged_end, &border_type) {
             let after = self.borders.remove(after_index);
-            merged_end = after.end;
+            merged_end = after.end().to_owned();
         }
 
-        self.borders.push(Border {
-            start: merged_start,
-            end: merged_end,
+        self.borders.push(match border_type {
+            BorderType::Arc => Border::Arc(merged_start, merged_end),
+            BorderType::Line => Border::LineGrid(merged_start, merged_end),
         });
     }
 
@@ -163,7 +174,7 @@ impl Maze {
     ) -> Option<usize> {
         self.borders
             .iter()
-            .position(|b| &b.border_type() == border_type && &b.end == from_coord)
+            .position(|b| &b.border_type() == border_type && b.end() == from_coord)
     }
 
     fn find_merge_end(
@@ -173,7 +184,7 @@ impl Maze {
     ) -> Option<usize> {
         self.borders
             .iter()
-            .position(|b| &b.border_type() == border_type && &b.start == to_coord)
+            .position(|b| &b.border_type() == border_type && b.start() == to_coord)
     }
 
     fn neighbour(

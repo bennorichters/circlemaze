@@ -1,8 +1,8 @@
 use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
-const RADIUS_INNER_CIRCLE: u32 = 20;
-const CENTER: CartesianCoord = (400., 350.);
+// const RADIUS_INNER_CIRCLE: u32 = 20;
+// const CENTER: CartesianCoord = (50., 50.);
 
 pub type CartesianCoord = (f64, f64);
 
@@ -13,68 +13,78 @@ pub trait Canvas {
     fn draw_line(self, coord: CartesianCoord) -> Self;
 }
 
-pub fn parse<T: Canvas>(borders: Vec<Border>, mut canvas: T) -> T {
-    for border in borders {
-        let radius = (border.start.circle + 1) * RADIUS_INNER_CIRCLE;
-
-        canvas = if border.border_type() == BorderType::Arc && border.start == border.end {
-            canvas.draw_circle(radius, CENTER)
-        } else {
-            arc_or_line(border, radius, canvas)
-        };
-    }
-
-    canvas
+pub struct Parser {
+    pub center: CartesianCoord,
+    pub radius_inner_circle: u32,
+    pub borders: Vec<Border>,
 }
 
-fn arc_or_line<T: Canvas>(border: Border, radius: u32, mut canvas: T) -> T {
-    let total_steps = steps_in_circle(border.start.circle);
-    let angle = angle(border.start.step, total_steps);
-    let coord = cartesian_coord(radius, angle);
+impl Parser {
+    pub fn parse<T: Canvas>(&self, mut canvas: T) -> T {
+        for border in &self.borders {
+            let radius = (border.start().circle + 1) * self.radius_inner_circle;
 
-    canvas = canvas.move_to(coord);
-    match border.border_type() {
-        BorderType::Arc => {
-            let (long_arc_flag, coord) = arc(radius, border.start.step, total_steps, border.end);
-            canvas.draw_arc(radius, long_arc_flag, coord)
+            canvas = if border.border_type() == BorderType::Arc && border.start() == border.end() {
+                canvas.draw_circle(radius, self.center)
+            } else {
+                self.arc_or_line(border, radius, canvas)
+            };
         }
 
-        BorderType::Line => canvas.draw_line(line(angle, border.end)),
+        canvas
     }
-}
 
-fn arc(
-    radius: u32,
-    start_step: u32,
-    total_steps: u32,
-    end: CircleCoordinate,
-) -> (u8, CartesianCoord) {
-    let end_angle = angle(end.step, total_steps);
-    let diff = if end.step >= start_step {
-        end.step - start_step
-    } else {
-        total_steps - start_step + end.step
-    };
-    let large_arc_flag: u8 = (diff > (total_steps / 2)).into();
-    let end_coord = cartesian_coord(radius, end_angle);
+    fn arc_or_line<T: Canvas>(&self, border: &Border, radius: u32, mut canvas: T) -> T {
+        let total_steps = steps_in_circle(border.start().circle);
+        let angle = self.angle(border.start().step, total_steps);
+        let coord = self.cartesian_coord(radius, angle);
 
-    (large_arc_flag, end_coord)
-}
+        canvas = canvas.move_to(coord);
+        match border.border_type() {
+            BorderType::Arc => {
+                let (long_arc_flag, coord) =
+                    self.arc(radius, border.start().step, total_steps, border.end());
+                canvas.draw_arc(radius, long_arc_flag, coord)
+            }
 
-fn line(angle: f64, end: CircleCoordinate) -> (f64, f64) {
-    let end_radius = (end.circle + 1) * RADIUS_INNER_CIRCLE;
-    cartesian_coord(end_radius, angle)
-}
+            BorderType::Line => canvas.draw_line(self.line(angle, border.end())),
+        }
+    }
 
-fn angle(step: u32, total_steps: u32) -> f64 {
-    FULL_CIRCLE * step as f64 / total_steps as f64
-}
+    fn arc(
+        &self,
+        radius: u32,
+        start_step: u32,
+        total_steps: u32,
+        end: &CircleCoordinate,
+    ) -> (u8, CartesianCoord) {
+        let end_angle = self.angle(end.step, total_steps);
+        let diff = if end.step >= start_step {
+            end.step - start_step
+        } else {
+            total_steps - start_step + end.step
+        };
+        let large_arc_flag: u8 = (diff > (total_steps / 2)).into();
+        let end_coord = self.cartesian_coord(radius, end_angle);
 
-fn cartesian_coord(radius: u32, angle: f64) -> (f64, f64) {
-    (
-        CENTER.0 + radius as f64 * angle.cos(),
-        CENTER.1 - radius as f64 * angle.sin(),
-    )
+        (large_arc_flag, end_coord)
+    }
+
+    fn line(&self, angle: f64, end: &CircleCoordinate) -> (f64, f64) {
+        let end_radius = (end.circle + 1) * self.radius_inner_circle;
+        self.cartesian_coord(end_radius, angle)
+    }
+
+    fn angle(&self, step: u32, total_steps: u32) -> f64 {
+        FULL_CIRCLE * step as f64 / total_steps as f64
+    }
+
+    fn cartesian_coord(&self, radius: u32, angle: f64) -> (f64, f64) {
+        (
+            self.center.0 + radius as f64 * angle.cos(),
+            self.center.1 - radius as f64 * angle.sin(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -85,26 +95,26 @@ mod parse_tests {
 
     use crate::{
         maze::maze::{Border, CircleCoordinate},
-        svg::parse::{parse, Canvas},
+        svg::parse::Canvas,
     };
 
-    use super::CartesianCoord;
+    use super::{CartesianCoord, Parser};
 
     #[test]
     fn test_parse() {
         let path = vec![
-            Border {
-                start: CircleCoordinate { circle: 0, step: 0 },
-                end: CircleCoordinate { circle: 0, step: 3 },
-            },
-            Border {
-                start: CircleCoordinate { circle: 0, step: 2 },
-                end: CircleCoordinate { circle: 1, step: 2 },
-            },
-            Border {
-                start: CircleCoordinate { circle: 2, step: 0 },
-                end: CircleCoordinate { circle: 2, step: 0 },
-            },
+            Border::Arc(
+                CircleCoordinate { circle: 0, step: 0 },
+                CircleCoordinate { circle: 0, step: 3 },
+            ),
+            Border::LineGrid(
+                CircleCoordinate { circle: 0, step: 2 },
+                CircleCoordinate { circle: 1, step: 2 },
+            ),
+            Border::Arc(
+                CircleCoordinate { circle: 2, step: 0 },
+                CircleCoordinate { circle: 2, step: 0 },
+            ),
         ];
         let expected = DataHolder {
             params: vec![
@@ -116,7 +126,13 @@ mod parse_tests {
             ],
             index: 0,
         };
-        parse(path, expected);
+
+        let parser = Parser {
+            center: (50., 50.),
+            radius_inner_circle: 20,
+            borders: path,
+        };
+        parser.parse(expected);
     }
 
     const EPSILON: f64 = 0.00001;

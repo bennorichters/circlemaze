@@ -3,11 +3,11 @@ use std::{collections::HashMap, error::Error, fs::File};
 
 use crate::maze::maze::Border;
 
-use super::parse::{parse, Canvas, CartesianCoord};
+use super::parse::{Canvas, CartesianCoord, Parser};
 
 pub fn draw(borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
-    let canvas = parse(
-        borders,
+    let parser = Parser{ center: (400., 350.), radius_inner_circle: 20, borders };
+    let canvas = parser.parse(
         SvgCanvas {
             path: String::new(),
             circle: None,
