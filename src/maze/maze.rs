@@ -98,6 +98,7 @@ impl Maze {
             add_options(&mut options, &coord);
             let (from_coord, to_coord, direction) = self.next(&mut options, &current_path);
             coord = to_coord.to_owned();
+
             current_path.push(to_coord.to_owned());
             let (merge_start, merge_end, border_type) = match direction {
                 Direction::Out => (from_coord, to_coord, BorderType::Line),
@@ -128,51 +129,6 @@ impl Maze {
         }
 
         panic!();
-    }
-
-    fn merge_borders(
-        &mut self,
-        start: CircleCoordinate,
-        end: CircleCoordinate,
-        border_type: BorderType,
-    ) {
-        let mut merged_start = start;
-        let mut merged_end = end;
-
-        if let Some(before_index) = self.find_merge_start(&merged_start, &border_type) {
-            let before = self.borders.remove(before_index);
-            merged_start = before.start;
-        }
-
-        if let Some(after_index) = self.find_merge_end(&merged_end, &border_type) {
-            let after = self.borders.remove(after_index);
-            merged_end = after.end;
-        }
-
-        self.borders.push(Border {
-            start: merged_start,
-            end: merged_end,
-        });
-    }
-
-    fn find_merge_start(
-        &self,
-        from_coord: &CircleCoordinate,
-        border_type: &BorderType,
-    ) -> Option<usize> {
-        self.borders
-            .iter()
-            .position(|b| &b.border_type() == border_type && &b.end == from_coord)
-    }
-
-    fn find_merge_end(
-        &self,
-        to_coord: &CircleCoordinate,
-        border_type: &BorderType,
-    ) -> Option<usize> {
-        self.borders
-            .iter()
-            .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
 
     fn neighbour(
@@ -236,6 +192,51 @@ impl Maze {
                 }
             }
         }
+    }
+
+    fn merge_borders(
+        &mut self,
+        start: CircleCoordinate,
+        end: CircleCoordinate,
+        border_type: BorderType,
+    ) {
+        let mut merged_start = start;
+        let mut merged_end = end;
+
+        if let Some(before_index) = self.find_merge_start(&merged_start, &border_type) {
+            let before = self.borders.remove(before_index);
+            merged_start = before.start;
+        }
+
+        if let Some(after_index) = self.find_merge_end(&merged_end, &border_type) {
+            let after = self.borders.remove(after_index);
+            merged_end = after.end;
+        }
+
+        self.borders.push(Border {
+            start: merged_start,
+            end: merged_end,
+        });
+    }
+
+    fn find_merge_start(
+        &self,
+        from_coord: &CircleCoordinate,
+        border_type: &BorderType,
+    ) -> Option<usize> {
+        self.borders
+            .iter()
+            .position(|b| &b.border_type() == border_type && &b.end == from_coord)
+    }
+
+    fn find_merge_end(
+        &self,
+        to_coord: &CircleCoordinate,
+        border_type: &BorderType,
+    ) -> Option<usize> {
+        self.borders
+            .iter()
+            .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
 }
 
