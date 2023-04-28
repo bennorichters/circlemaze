@@ -1,3 +1,5 @@
+use fraction::ToPrimitive;
+
 use crate::maze::components::{Angle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
@@ -49,12 +51,14 @@ impl Parser {
 
     fn arc(&self, radius: u32, start_angle: Angle, end: &CircleCoordinate) -> (u8, CartesianCoord) {
         let end_angle = self.angle(end.angle);
-        let diff = if end.angle.0 >= start_angle.0 {
-            end.angle.0 - start_angle.0
+
+        let diff = if start_angle > end.angle {
+            Angle::from(1) - start_angle + end.angle
         } else {
-            start_angle.1 - start_angle.0 + end.angle.0
+            end.angle - start_angle
         };
-        let large_arc_flag: u8 = (diff > (start_angle.1 / 2)).into();
+        let large_arc_flag = (diff > Angle::new(1_u32, 2_u32)).into();
+
         let end_coord = self.cartesian_coord(radius, end_angle);
 
         (large_arc_flag, end_coord)
@@ -66,7 +70,7 @@ impl Parser {
     }
 
     fn angle(&self, angle: Angle) -> f64 {
-        FULL_CIRCLE * angle.0 as f64 / angle.1 as f64
+        FULL_CIRCLE * angle.to_f64().unwrap()
     }
 
     fn cartesian_coord(&self, radius: u32, angle: f64) -> (f64, f64) {
@@ -84,7 +88,7 @@ mod parse_tests {
     use approx::abs_diff_eq;
 
     use crate::{
-        maze::components::{Border, CircleCoordinate},
+        maze::components::{Border, CircleCoordinate, Angle},
         svg::parse::Canvas,
     };
 
@@ -96,31 +100,31 @@ mod parse_tests {
             Border {
                 start: CircleCoordinate {
                     circle: 0,
-                    angle: (0, 5),
+                    angle: Angle::from(0),
                 },
                 end: CircleCoordinate {
                     circle: 0,
-                    angle: (3, 5),
+                    angle: Angle::new(3_u32, 5_u32),
                 },
             },
             Border {
                 start: CircleCoordinate {
                     circle: 0,
-                    angle: (2, 5),
+                    angle: Angle::new(2_u32, 5_u32 ),
                 },
                 end: CircleCoordinate {
                     circle: 1,
-                    angle: (4, 10),
+                    angle: Angle::new(4_u32, 10_u32),
                 },
             },
             Border {
                 start: CircleCoordinate {
                     circle: 2,
-                    angle: (0, 15),
+                    angle: Angle::from(0),
                 },
                 end: CircleCoordinate {
                     circle: 2,
-                    angle: (0, 15),
+                    angle: Angle::from(0),
                 },
             },
         ];

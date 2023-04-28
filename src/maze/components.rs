@@ -1,4 +1,6 @@
-pub type Angle = (u32, u32);
+use fraction::GenericFraction;
+
+pub type Angle = GenericFraction<u32>;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct CircleCoordinate {

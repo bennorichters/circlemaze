@@ -1,4 +1,4 @@
-use super::components::{CircleCoordinate, Border, BorderType};
+use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
 const INNER_CIRCLE_PARTS: u32 = 5;
 
@@ -14,7 +14,7 @@ fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
         for step in 0..denominator {
             result.push(CircleCoordinate {
                 circle,
-                angle: (step, denominator),
+                angle: Angle::new(step, denominator),
             });
         }
     }
@@ -30,6 +30,7 @@ pub fn create_maze(circles: u32) -> Vec<Border> {
     let mut open_coords = all_coords(circles);
 
     maze.close_outer_circle();
+
     while !open_coords.is_empty() {
         let coord = &open_coords[random_index(open_coords.len())];
         let path_coords = maze.create_path(coord, &open_coords);
@@ -45,15 +46,14 @@ struct Maze {
 
 impl Maze {
     fn close_outer_circle(&mut self) {
-        let denominator = steps_in_circle(self.outer_circle);
         self.borders.push(Border {
             start: CircleCoordinate {
                 circle: self.outer_circle,
-                angle: (0, denominator),
+                angle: Angle::from(0),
             },
             end: CircleCoordinate {
                 circle: self.outer_circle,
-                angle: (0, denominator),
+                angle: Angle::from(0),
             },
         });
     }
@@ -109,59 +109,47 @@ impl Maze {
         direction: &Direction,
     ) -> Option<CircleCoordinate> {
         match direction {
-            Direction::In => {
-                if coord.circle == 0 || (coord.circle * coord.angle.0) % (coord.circle + 1) != 0 {
-                    None
-                } else {
-                    let numerator = (coord.circle * coord.angle.0) / (coord.circle + 1);
-                    let denominator = steps_in_circle(coord.circle - 1);
-                    Some(CircleCoordinate {
-                        circle: coord.circle - 1,
-                        angle: (numerator, denominator),
-                    })
-                }
-            }
-
             Direction::Out => {
-                if coord.circle == self.outer_circle
-                    || ((coord.circle + 2) * coord.angle.0) % (coord.circle + 1) != 0
-                {
-                    None
-                } else {
-                    let numerator = ((coord.circle + 2) * coord.angle.0) / (coord.circle + 1);
-                    let denominator = steps_in_circle(coord.circle + 1);
+                if coord.circle < self.outer_circle && is_on_main_radiant(coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
-                        angle: (numerator, denominator),
-                    })
-                }
-            }
-
-            Direction::Clockwise => {
-                if coord.angle.0 == (steps_in_circle(coord.circle) - 1) {
-                    Some(CircleCoordinate {
-                        circle: coord.circle,
-                        angle: (0, coord.angle.1),
+                        angle: coord.angle.to_owned(),
                     })
                 } else {
-                    Some(CircleCoordinate {
-                        circle: coord.circle,
-                        angle: (coord.angle.0 + 1, coord.angle.1),
-                    })
+                    None
                 }
+            }
+            Direction::In => {
+                if coord.circle > 0 && is_on_main_radiant(coord.angle) {
+                    Some(CircleCoordinate {
+                        circle: coord.circle - 1,
+                        angle: coord.angle.to_owned(),
+                    })
+                } else {
+                    None
+                }
+            }
+            Direction::Clockwise => {
+                let next_angle = coord.angle + Angle::new(1_u32, steps_in_circle(coord.circle));
+                Some(CircleCoordinate {
+                    circle: coord.circle,
+                    angle: if next_angle == Angle::from(1) {
+                        Angle::from(0)
+                    } else {
+                        next_angle
+                    },
+                })
             }
             Direction::CounterClockwise => {
-                if coord.angle.0 == 0 {
-                    Some(CircleCoordinate {
-                        circle: coord.circle,
-                        angle: (steps_in_circle(coord.circle) - 1, coord.angle.1),
-                    })
-                } else {
-                    Some(CircleCoordinate {
-                        circle: coord.circle,
-                        angle: (coord.angle.0 - 1, coord.angle.1),
-                    })
-                }
+                let prev_angle = coord.angle - Angle::new(1_u32, steps_in_circle(coord.circle));
+                Some(CircleCoordinate {
+                    circle: coord.circle,
+                    angle: if prev_angle < Angle::from(0) {
+                        Angle::from(1) + prev_angle
+                    } else {
+                        prev_angle
+                    },
+                })
             }
         }
     }
@@ -229,4 +217,9 @@ enum Direction {
     In,
     Clockwise,
     CounterClockwise,
+}
+
+fn is_on_main_radiant(angle: Angle) -> bool {
+    let bar = angle / Angle::new(1_u32, INNER_CIRCLE_PARTS);
+    *bar.denom().unwrap() == 1
 }
