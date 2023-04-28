@@ -1,26 +1,6 @@
 use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
-const INNER_CIRCLE_PARTS: u32 = 5;
-
-fn steps_in_circle(circle: u32) -> u32 {
-    (circle + 1) * INNER_CIRCLE_PARTS
-}
-
-fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
-    let mut result: Vec<CircleCoordinate> = Vec::new();
-
-    for circle in 0..circles {
-        let denominator = steps_in_circle(circle);
-        for step in 0..denominator {
-            result.push(CircleCoordinate {
-                circle,
-                angle: Angle::new(step, denominator),
-            });
-        }
-    }
-
-    result
-}
+const INNER_CIRCLE_PARTS: u32 = 7;
 
 pub fn create_maze(circles: u32) -> Vec<Border> {
     let mut maze = Maze {
@@ -63,15 +43,15 @@ impl Maze {
         start_coord: &CircleCoordinate,
         open_coords: &[CircleCoordinate],
     ) -> Vec<CircleCoordinate> {
-        let mut current_path: Vec<CircleCoordinate> = vec![start_coord.to_owned()];
+        let mut visited: Vec<CircleCoordinate> = vec![start_coord.to_owned()];
         let mut options: Vec<(CircleCoordinate, Direction)> = Vec::new();
         let mut coord = start_coord.to_owned();
         while open_coords.contains(&coord) {
             add_options(&mut options, &coord);
-            let (from_coord, to_coord, direction) = self.next(&mut options, &current_path);
+            let (from_coord, to_coord, direction) = self.next(&mut options, &visited);
             coord = to_coord.to_owned();
 
-            current_path.push(to_coord.to_owned());
+            visited.push(to_coord.to_owned());
             let (merge_start, merge_end, border_type) = match direction {
                 Direction::Out => (from_coord, to_coord, BorderType::Line),
                 Direction::In => (to_coord, from_coord, BorderType::Line),
@@ -81,7 +61,7 @@ impl Maze {
             self.merge_borders(merge_start, merge_end, border_type);
         }
 
-        current_path
+        visited
     }
 
     fn next(
@@ -110,7 +90,7 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle && is_on_main_radiant(coord.angle) {
+                if coord.circle < self.outer_circle && is_on_circle_part(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
@@ -120,7 +100,7 @@ impl Maze {
                 }
             }
             Direction::In => {
-                if coord.circle > 0 && is_on_main_radiant(coord.angle) {
+                if coord.circle > 0 && is_on_circle_part(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
@@ -200,6 +180,26 @@ impl Maze {
     }
 }
 
+fn steps_in_circle(circle: u32) -> u32 {
+    (circle + 1) * INNER_CIRCLE_PARTS
+}
+
+fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
+    let mut result: Vec<CircleCoordinate> = Vec::new();
+
+    for circle in 0..circles {
+        let denominator = steps_in_circle(circle);
+        for step in 0..denominator {
+            result.push(CircleCoordinate {
+                circle,
+                angle: Angle::new(step, denominator),
+            });
+        }
+    }
+
+    result
+}
+
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
     options.push((coord.to_owned(), Direction::In));
     options.push((coord.to_owned(), Direction::Out));
@@ -219,7 +219,7 @@ enum Direction {
     CounterClockwise,
 }
 
-fn is_on_main_radiant(angle: Angle) -> bool {
-    let bar = angle / Angle::new(1_u32, INNER_CIRCLE_PARTS);
+fn is_on_circle_part(circle: u32, angle: Angle) -> bool {
+    let bar = angle / Angle::new(1_u32, steps_in_circle(circle));
     *bar.denom().unwrap() == 1
 }

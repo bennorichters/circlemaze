@@ -50,8 +50,6 @@ impl Parser {
     }
 
     fn arc(&self, radius: u32, start_angle: Angle, end: &CircleCoordinate) -> (u8, CartesianCoord) {
-        let end_angle = self.angle(end.angle);
-
         let diff = if start_angle > end.angle {
             Angle::from(1) - start_angle + end.angle
         } else {
@@ -59,7 +57,7 @@ impl Parser {
         };
         let large_arc_flag = (diff > Angle::new(1_u32, 2_u32)).into();
 
-        let end_coord = self.cartesian_coord(radius, end_angle);
+        let end_coord = self.cartesian_coord(radius, self.angle(end.angle));
 
         (large_arc_flag, end_coord)
     }
@@ -88,7 +86,7 @@ mod parse_tests {
     use approx::abs_diff_eq;
 
     use crate::{
-        maze::components::{Border, CircleCoordinate, Angle},
+        maze::components::{Angle, Border, CircleCoordinate},
         svg::parse::Canvas,
     };
 
@@ -110,7 +108,7 @@ mod parse_tests {
             Border {
                 start: CircleCoordinate {
                     circle: 0,
-                    angle: Angle::new(2_u32, 5_u32 ),
+                    angle: Angle::new(2_u32, 5_u32),
                 },
                 end: CircleCoordinate {
                     circle: 1,
