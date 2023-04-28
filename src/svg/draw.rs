@@ -45,13 +45,13 @@ struct SvgCanvas {
 
 impl Canvas for SvgCanvas {
     fn move_to(mut self, coord: CartesianCoord) -> Self {
-        self.path.push_str(&format!("M {} {}", coord.0, coord.1));
+        self.path.push_str(&format!("M {} {} ", coord.0, coord.1));
         self
     }
 
     fn draw_arc(mut self, radius: u32, long_arc_flag: u8, coord: CartesianCoord) -> Self {
         self.path.push_str(&format!(
-            "A {} {} 0 {} 0 {} {}",
+            "A {} {} 0 {} 0 {} {} ",
             radius, radius, long_arc_flag, coord.0, coord.1
         ));
         self
@@ -67,7 +67,7 @@ impl Canvas for SvgCanvas {
     }
 
     fn draw_line(mut self, coord: CartesianCoord) -> Self {
-        self.path.push_str(&format!("L {} {}", coord.0, coord.1));
+        self.path.push_str(&format!("L {} {} ", coord.0, coord.1));
         self
     }
 }
