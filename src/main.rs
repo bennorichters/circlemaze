@@ -1,4 +1,4 @@
-use maze::maze::create_maze;
+use maze::factory::create_maze;
 use svg::draw;
 
 mod maze;
