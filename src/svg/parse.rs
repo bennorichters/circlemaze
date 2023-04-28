@@ -20,9 +20,9 @@ pub struct Parser {
 impl Parser {
     pub fn parse<T: Canvas>(&self, mut canvas: T) -> T {
         for border in &self.borders {
-            let radius = (border.start().circle + 1) * self.radius_inner_circle;
+            let radius = (border.start.circle + 1) * self.radius_inner_circle;
 
-            canvas = if border.border_type() == BorderType::Arc && border.start() == border.end() {
+            canvas = if border.border_type() == BorderType::Arc && border.start == border.end {
                 canvas.draw_circle(radius, self.center)
             } else {
                 self.arc_or_line(border, radius, canvas)
@@ -33,17 +33,17 @@ impl Parser {
     }
 
     fn arc_or_line<T: Canvas>(&self, border: &Border, radius: u32, mut canvas: T) -> T {
-        let angle = self.angle(border.start().angle);
+        let angle = self.angle(border.start.angle);
         let coord = self.cartesian_coord(radius, angle);
 
         canvas = canvas.move_to(coord);
         match border.border_type() {
             BorderType::Arc => {
-                let (long_arc_flag, coord) = self.arc(radius, border.start().angle, border.end());
+                let (long_arc_flag, coord) = self.arc(radius, border.start.angle, &border.end);
                 canvas.draw_arc(radius, long_arc_flag, coord)
             }
 
-            BorderType::Line => canvas.draw_line(self.line(angle, border.end())),
+            BorderType::Line => canvas.draw_line(self.line(angle, &border.end)),
         }
     }
 
@@ -93,36 +93,36 @@ mod parse_tests {
     #[test]
     fn test_parse() {
         let path = vec![
-            Border::Arc(
-                CircleCoordinate {
+            Border {
+                start: CircleCoordinate {
                     circle: 0,
                     angle: (0, 5),
                 },
-                CircleCoordinate {
+                end: CircleCoordinate {
                     circle: 0,
                     angle: (3, 5),
                 },
-            ),
-            Border::LineGrid(
-                CircleCoordinate {
+            },
+            Border {
+                start: CircleCoordinate {
                     circle: 0,
                     angle: (2, 5),
                 },
-                CircleCoordinate {
+                end: CircleCoordinate {
                     circle: 1,
                     angle: (4, 10),
                 },
-            ),
-            Border::Arc(
-                CircleCoordinate {
+            },
+            Border {
+                start: CircleCoordinate {
                     circle: 2,
                     angle: (0, 15),
                 },
-                CircleCoordinate {
+                end: CircleCoordinate {
                     circle: 2,
                     angle: (0, 15),
                 },
-            ),
+            },
         ];
         let expected = DataHolder {
             params: vec![
