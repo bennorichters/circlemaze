@@ -1,4 +1,4 @@
-use crate::maze::maze::{steps_in_circle, Border, BorderType, CircleCoordinate};
+use crate::maze::maze::{Angle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 
@@ -33,15 +33,13 @@ impl Parser {
     }
 
     fn arc_or_line<T: Canvas>(&self, border: &Border, radius: u32, mut canvas: T) -> T {
-        let total_steps = steps_in_circle(border.start().circle);
-        let angle = self.angle(border.start().angle.0, total_steps);
+        let angle = self.angle(border.start().angle);
         let coord = self.cartesian_coord(radius, angle);
 
         canvas = canvas.move_to(coord);
         match border.border_type() {
             BorderType::Arc => {
-                let (long_arc_flag, coord) =
-                    self.arc(radius, border.start().angle.0, total_steps, border.end());
+                let (long_arc_flag, coord) = self.arc(radius, border.start().angle, border.end());
                 canvas.draw_arc(radius, long_arc_flag, coord)
             }
 
@@ -49,20 +47,14 @@ impl Parser {
         }
     }
 
-    fn arc(
-        &self,
-        radius: u32,
-        start_step: u32,
-        total_steps: u32,
-        end: &CircleCoordinate,
-    ) -> (u8, CartesianCoord) {
-        let end_angle = self.angle(end.angle.0, total_steps);
-        let diff = if end.angle.0 >= start_step {
-            end.angle.0 - start_step
+    fn arc(&self, radius: u32, start_angle: Angle, end: &CircleCoordinate) -> (u8, CartesianCoord) {
+        let end_angle = self.angle(end.angle);
+        let diff = if end.angle.0 >= start_angle.0 {
+            end.angle.0 - start_angle.0
         } else {
-            total_steps - start_step + end.angle.0
+            start_angle.1 - start_angle.0 + end.angle.0
         };
-        let large_arc_flag: u8 = (diff > (total_steps / 2)).into();
+        let large_arc_flag: u8 = (diff > (start_angle.1 / 2)).into();
         let end_coord = self.cartesian_coord(radius, end_angle);
 
         (large_arc_flag, end_coord)
@@ -73,8 +65,8 @@ impl Parser {
         self.cartesian_coord(end_radius, angle)
     }
 
-    fn angle(&self, step: u32, total_steps: u32) -> f64 {
-        FULL_CIRCLE * step as f64 / total_steps as f64
+    fn angle(&self, angle: Angle) -> f64 {
+        FULL_CIRCLE * angle.0 as f64 / angle.1 as f64
     }
 
     fn cartesian_coord(&self, radius: u32, angle: f64) -> (f64, f64) {
@@ -102,16 +94,34 @@ mod parse_tests {
     fn test_parse() {
         let path = vec![
             Border::Arc(
-                CircleCoordinate { circle: 0, angle: (0, 5) },
-                CircleCoordinate { circle: 0, angle: (3, 5) },
+                CircleCoordinate {
+                    circle: 0,
+                    angle: (0, 5),
+                },
+                CircleCoordinate {
+                    circle: 0,
+                    angle: (3, 5),
+                },
             ),
             Border::LineGrid(
-                CircleCoordinate { circle: 0, angle: (2, 5) },
-                CircleCoordinate { circle: 1, angle: (4, 10) },
+                CircleCoordinate {
+                    circle: 0,
+                    angle: (2, 5),
+                },
+                CircleCoordinate {
+                    circle: 1,
+                    angle: (4, 10),
+                },
             ),
             Border::Arc(
-                CircleCoordinate { circle: 2, angle: (0, 15) },
-                CircleCoordinate { circle: 2, angle: (0, 15) },
+                CircleCoordinate {
+                    circle: 2,
+                    angle: (0, 15),
+                },
+                CircleCoordinate {
+                    circle: 2,
+                    angle: (0, 15),
+                },
             ),
         ];
         let expected = DataHolder {

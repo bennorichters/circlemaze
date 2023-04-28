@@ -49,7 +49,7 @@ impl Border {
     }
 }
 
-pub fn steps_in_circle(circle: u32) -> u32 {
+fn steps_in_circle(circle: u32) -> u32 {
     (circle + 1) * INNER_CIRCLE_PARTS
 }
 
