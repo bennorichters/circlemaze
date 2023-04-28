@@ -1,7 +1,7 @@
 use handlebars::Handlebars;
 use std::{collections::HashMap, error::Error, fs::File};
 
-use crate::maze::factory::Border;
+use crate::maze::components::Border;
 
 use super::parse::{Canvas, CartesianCoord, Parser};
 

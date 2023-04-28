@@ -1,4 +1,4 @@
-use crate::maze::factory::{Angle, Border, BorderType, CircleCoordinate};
+use crate::maze::components::{Angle, Border, BorderType, CircleCoordinate};
 
 const FULL_CIRCLE: f64 = 2. * std::f64::consts::PI;
 
@@ -84,7 +84,7 @@ mod parse_tests {
     use approx::abs_diff_eq;
 
     use crate::{
-        maze::factory::{Border, CircleCoordinate},
+        maze::components::{Border, CircleCoordinate},
         svg::parse::Canvas,
     };
 
