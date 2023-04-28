@@ -1,9 +1,11 @@
 const INNER_CIRCLE_PARTS: u32 = 5;
 
+pub type Angle = (u32, u32);
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct CircleCoordinate {
     pub circle: u32,
-    pub step: u32,
+    pub angle: Angle,
 }
 
 #[derive(PartialEq)]
@@ -55,8 +57,12 @@ fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
     let mut result: Vec<CircleCoordinate> = Vec::new();
 
     for circle in 0..circles {
-        for step in 0..steps_in_circle(circle) {
-            result.push(CircleCoordinate { circle, step });
+        let denominator = steps_in_circle(circle);
+        for step in 0..denominator {
+            result.push(CircleCoordinate {
+                circle,
+                angle: (step, denominator),
+            });
         }
     }
 
@@ -86,14 +92,15 @@ struct Maze {
 
 impl Maze {
     fn close_outer_circle(&mut self) {
+        let denominator = steps_in_circle(self.outer_circle);
         self.borders.push(Border::Arc(
             CircleCoordinate {
                 circle: self.outer_circle,
-                step: 0,
+                angle: (0, denominator),
             },
             CircleCoordinate {
                 circle: self.outer_circle,
-                step: 0,
+                angle: (0, denominator),
             },
         ));
     }
@@ -111,18 +118,20 @@ impl Maze {
             let ((from_coord, direction), to_coord) = self.next(&mut options, &current_path);
             coord = to_coord.to_owned();
             current_path.push(to_coord.to_owned());
-            match direction {
-                Direction::Out => self.merge_borders(from_coord, to_coord, BorderType::Line),
-                Direction::In => self.merge_borders(to_coord, from_coord, BorderType::Line),
-                Direction::Clockwise => self.merge_borders(from_coord, to_coord, BorderType::Arc),
-                Direction::CounterClockwise => {
-                    self.merge_borders(to_coord, from_coord, BorderType::Arc)
-                }
+            let (merge_start, merge_end, border_type) = match direction {
+                Direction::Out => (from_coord, to_coord, BorderType::Line),
+                Direction::In => (to_coord, from_coord, BorderType::Line),
+                Direction::Clockwise => (from_coord, to_coord, BorderType::Arc),
+                Direction::CounterClockwise => (to_coord, from_coord, BorderType::Arc),
             };
+            self.merge_borders(merge_start, merge_end, border_type);
         }
 
         current_path
     }
+
+    // fn is_free(used: &[CircleCoordinate]) {
+    // }
 
     fn next(
         &self,
@@ -194,52 +203,56 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::In => {
-                if coord.circle == 0 || (coord.circle * coord.step) % (coord.circle + 1) != 0 {
+                if coord.circle == 0 || (coord.circle * coord.angle.0) % (coord.circle + 1) != 0 {
                     None
                 } else {
+                    let numerator = (coord.circle * coord.angle.0) / (coord.circle + 1);
+                    let denominator = steps_in_circle(coord.circle - 1);
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
-                        step: (coord.circle * coord.step) / (coord.circle + 1),
+                        angle: (numerator, denominator),
                     })
                 }
             }
 
             Direction::Out => {
                 if coord.circle == self.outer_circle
-                    || ((coord.circle + 2) * coord.step) % (coord.circle + 1) != 0
+                    || ((coord.circle + 2) * coord.angle.0) % (coord.circle + 1) != 0
                 {
                     None
                 } else {
+                    let numerator =((coord.circle + 2) * coord.angle.0) / (coord.circle + 1);
+                    let denominator = steps_in_circle(coord.circle + 1);
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
-                        step: ((coord.circle + 2) * coord.step) / (coord.circle + 1),
+                        angle: (numerator, denominator),
                     })
                 }
             }
 
             Direction::Clockwise => {
-                if coord.step == (steps_in_circle(coord.circle) - 1) {
+                if coord.angle.0 == (steps_in_circle(coord.circle) - 1) {
                     Some(CircleCoordinate {
                         circle: coord.circle,
-                        step: 0,
+                        angle: (0, coord.angle.1),
                     })
                 } else {
                     Some(CircleCoordinate {
                         circle: coord.circle,
-                        step: coord.step + 1,
+                        angle: (coord.angle.0 + 1, coord.angle.1),
                     })
                 }
             }
             Direction::CounterClockwise => {
-                if coord.step == 0 {
+                if coord.angle.0 == 0 {
                     Some(CircleCoordinate {
                         circle: coord.circle,
-                        step: steps_in_circle(coord.circle) - 1,
+                        angle: (steps_in_circle(coord.circle) - 1, coord.angle.1),
                     })
                 } else {
                     Some(CircleCoordinate {
                         circle: coord.circle,
-                        step: coord.step - 1,
+                        angle: (coord.angle.0 - 1, coord.angle.1),
                     })
                 }
             }
