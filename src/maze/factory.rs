@@ -1,9 +1,11 @@
+use std::cmp::min;
+
 use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
-pub fn create_maze(circles: u32, parts_inner_circle: u32) -> Vec<Border> {
+pub fn create_maze(circles: u32, inner_slices: u32) -> Vec<Border> {
     let mut maze = Maze {
         outer_circle: circles,
-        parts_inner_circle,
+        inner_slices,
         borders: Vec::new(),
     };
     let mut open_coords = maze.all_coords();
@@ -20,7 +22,7 @@ pub fn create_maze(circles: u32, parts_inner_circle: u32) -> Vec<Border> {
 
 struct Maze {
     outer_circle: u32,
-    parts_inner_circle: u32,
+    inner_slices: u32,
     borders: Vec<Border>,
 }
 
@@ -182,7 +184,7 @@ impl Maze {
     }
 
     fn steps_in_circle(&self, circle: u32) -> u32 {
-        (circle + 1) * self.parts_inner_circle
+        (circle + 1) * self.inner_slices
     }
 
     fn all_coords(&self) -> Vec<CircleCoordinate> {
@@ -205,6 +207,39 @@ impl Maze {
         let bar = angle * Angle::from(self.steps_in_circle(circle));
         *bar.denom().unwrap() == 1
     }
+
+    fn next_coord_on_circle(&self, coord: CircleCoordinate) -> CircleCoordinate {
+        if coord.circle == 0 {
+            return CircleCoordinate {
+                circle: 0,
+                angle: if coord.angle == Angle::new(self.inner_slices - 1, self.inner_slices) {
+                    Angle::from(0)
+                } else {
+                    coord.angle + Angle::new(1_u32, self.inner_slices)
+                },
+            };
+        }
+
+        let n = coord.angle.numer().unwrap();
+        let d = coord.angle.denom().unwrap();
+
+        let normalized_denom = coord.circle * (coord.circle + 1) * self.inner_slices;
+        let normalized_numer = n * (normalized_denom / d);
+
+        let diff1 = coord.circle - (normalized_numer % coord.circle);
+        let diff2 = (coord.circle + 1) - (normalized_numer % (coord.circle + 1));
+
+        let next_numer = normalized_numer + min(diff1, diff2);
+
+        CircleCoordinate {
+            circle: coord.circle,
+            angle: if next_numer == normalized_denom {
+                Angle::from(0)
+            } else {
+                Angle::new(next_numer, normalized_denom)
+            },
+        }
+    }
 }
 
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
@@ -226,72 +261,120 @@ enum Direction {
     CounterClockwise,
 }
 
-// fn next_coord_on_circle(coord: CircleCoordinate) -> CircleCoordinate {
-//     todo!();
-// }
+#[cfg(test)]
+mod factory_tests {
+    use crate::maze::{
+        components::{Angle, CircleCoordinate},
+        factory::Maze,
+    };
 
-// #[cfg(test)]
-// mod factory_tests {
-//     use crate::maze::{
-//         components::{Angle, CircleCoordinate},
-//         factory::{next_coord_on_circle, INNER_CIRCLE_PARTS},
-//     };
+    #[test]
+    fn test_next_coord_on_circle_circle0() {
+        let maze = Maze {
+            outer_circle: 10,
+            inner_slices: 7,
+            borders: vec![],
+        };
 
-//     #[test]
-//     fn test_next_coord_on_circle_circle0() {
-//         assert_eq!(
-//             CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::new(1_u32, INNER_CIRCLE_PARTS)
-//             },
-//             next_coord_on_circle(CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::from(0)
-//             })
-//         );
-//         assert_eq!(
-//             CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::new(2_u32, INNER_CIRCLE_PARTS)
-//             },
-//             next_coord_on_circle(CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::new(1_u32, INNER_CIRCLE_PARTS)
-//             })
-//         );
-//         assert_eq!(
-//             CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::new(INNER_CIRCLE_PARTS - 1, INNER_CIRCLE_PARTS)
-//             },
-//             next_coord_on_circle(CircleCoordinate {
-//                 circle: 0,
-//                 angle: Angle::from(0)
-//             })
-//         );
-//     }
+        assert_eq!(
+            CircleCoordinate {
+                circle: 0,
+                angle: Angle::new(1_u32, 7_u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 0,
+                angle: Angle::from(0)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 0,
+                angle: Angle::new(2_u32, 7_u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 0,
+                angle: Angle::new(1_u32, 7_u32)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 0,
+                angle: Angle::from(0)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 0,
+                angle: Angle::new(6_u32, 7_u32)
+            })
+        );
+    }
 
-//     #[test]
-//     fn test_next_coord_on_circle_circle4() {
-//         assert_eq!(
-//             CircleCoordinate {
-//                 circle: 4,
-//                 angle: Angle::new(1_u32, 5 * INNER_CIRCLE_PARTS)
-//             },
-//             next_coord_on_circle(CircleCoordinate {
-//                 circle: 4,
-//                 angle: Angle::from(0)
-//             })
-//         );
-//         assert_eq!(
-//             CircleCoordinate {
-//                 circle: 4,
-//                 angle: Angle::new(1_u32, 4 * INNER_CIRCLE_PARTS)
-//             },
-//             next_coord_on_circle(CircleCoordinate {
-//                 circle: 4,
-//                 angle: Angle::new(1_u32, 5 * INNER_CIRCLE_PARTS)
-//             })
-//         );
-//     }
-// }
+    #[test]
+    fn test_next_coord_on_circle_circle4() {
+        let maze = Maze {
+            outer_circle: 10,
+            inner_slices: 7,
+            borders: vec![],
+        };
+
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, (5 * 7) as u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::from(0)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, (4 * 7) as u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, (5 * 7) as u32)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(2_u32, (5 * 7) as u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, (4 * 7) as u32)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, 2_u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(17_u32, (5 * 7) as u32)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(18_u32, (5 * 7) as u32)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(1_u32, 2_u32)
+            })
+        );
+        assert_eq!(
+            CircleCoordinate {
+                circle: 4,
+                angle: Angle::from(0)
+            },
+            maze.next_coord_on_circle(CircleCoordinate {
+                circle: 4,
+                angle: Angle::new(34_u32, (5 * 7) as u32)
+            })
+        );
+    }
+}
