@@ -1,13 +1,12 @@
 use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
-const INNER_CIRCLE_PARTS: u32 = 7;
-
-pub fn create_maze(circles: u32) -> Vec<Border> {
+pub fn create_maze(circles: u32, parts_inner_circle: u32) -> Vec<Border> {
     let mut maze = Maze {
         outer_circle: circles,
+        parts_inner_circle,
         borders: Vec::new(),
     };
-    let mut open_coords = all_coords(circles);
+    let mut open_coords = maze.all_coords();
 
     maze.close_outer_circle();
 
@@ -21,6 +20,7 @@ pub fn create_maze(circles: u32) -> Vec<Border> {
 
 struct Maze {
     outer_circle: u32,
+    parts_inner_circle: u32,
     borders: Vec<Border>,
 }
 
@@ -90,7 +90,7 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle && is_on_circle_part(0, coord.angle) {
+                if coord.circle < self.outer_circle && self.is_on_circle_part(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
@@ -100,7 +100,7 @@ impl Maze {
                 }
             }
             Direction::In => {
-                if coord.circle > 0 && is_on_circle_part(0, coord.angle) {
+                if coord.circle > 0 && self.is_on_circle_part(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
@@ -110,7 +110,8 @@ impl Maze {
                 }
             }
             Direction::Clockwise => {
-                let next_angle = coord.angle + Angle::new(1_u32, steps_in_circle(coord.circle));
+                let next_angle =
+                    coord.angle + Angle::new(1_u32, self.steps_in_circle(coord.circle));
                 Some(CircleCoordinate {
                     circle: coord.circle,
                     angle: if next_angle == Angle::from(1) {
@@ -121,7 +122,8 @@ impl Maze {
                 })
             }
             Direction::CounterClockwise => {
-                let prev_angle = coord.angle - Angle::new(1_u32, steps_in_circle(coord.circle));
+                let prev_angle =
+                    coord.angle - Angle::new(1_u32, self.steps_in_circle(coord.circle));
                 Some(CircleCoordinate {
                     circle: coord.circle,
                     angle: if prev_angle < Angle::from(0) {
@@ -178,26 +180,31 @@ impl Maze {
             .iter()
             .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
-}
 
-fn steps_in_circle(circle: u32) -> u32 {
-    (circle + 1) * INNER_CIRCLE_PARTS
-}
-
-fn all_coords(circles: u32) -> Vec<CircleCoordinate> {
-    let mut result: Vec<CircleCoordinate> = Vec::new();
-
-    for circle in 0..circles {
-        let denominator = steps_in_circle(circle);
-        for step in 0..denominator {
-            result.push(CircleCoordinate {
-                circle,
-                angle: Angle::new(step, denominator),
-            });
-        }
+    fn steps_in_circle(&self, circle: u32) -> u32 {
+        (circle + 1) * self.parts_inner_circle
     }
 
-    result
+    fn all_coords(&self) -> Vec<CircleCoordinate> {
+        let mut result: Vec<CircleCoordinate> = Vec::new();
+
+        for circle in 0..self.outer_circle {
+            let denominator = self.steps_in_circle(circle);
+            for step in 0..denominator {
+                result.push(CircleCoordinate {
+                    circle,
+                    angle: Angle::new(step, denominator),
+                });
+            }
+        }
+
+        result
+    }
+
+    fn is_on_circle_part(&self, circle: u32, angle: Angle) -> bool {
+        let bar = angle * Angle::from(self.steps_in_circle(circle));
+        *bar.denom().unwrap() == 1
+    }
 }
 
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
@@ -219,7 +226,72 @@ enum Direction {
     CounterClockwise,
 }
 
-fn is_on_circle_part(circle: u32, angle: Angle) -> bool {
-    let bar = angle / Angle::new(1_u32, steps_in_circle(circle));
-    *bar.denom().unwrap() == 1
-}
+// fn next_coord_on_circle(coord: CircleCoordinate) -> CircleCoordinate {
+//     todo!();
+// }
+
+// #[cfg(test)]
+// mod factory_tests {
+//     use crate::maze::{
+//         components::{Angle, CircleCoordinate},
+//         factory::{next_coord_on_circle, INNER_CIRCLE_PARTS},
+//     };
+
+//     #[test]
+//     fn test_next_coord_on_circle_circle0() {
+//         assert_eq!(
+//             CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::new(1_u32, INNER_CIRCLE_PARTS)
+//             },
+//             next_coord_on_circle(CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::from(0)
+//             })
+//         );
+//         assert_eq!(
+//             CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::new(2_u32, INNER_CIRCLE_PARTS)
+//             },
+//             next_coord_on_circle(CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::new(1_u32, INNER_CIRCLE_PARTS)
+//             })
+//         );
+//         assert_eq!(
+//             CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::new(INNER_CIRCLE_PARTS - 1, INNER_CIRCLE_PARTS)
+//             },
+//             next_coord_on_circle(CircleCoordinate {
+//                 circle: 0,
+//                 angle: Angle::from(0)
+//             })
+//         );
+//     }
+
+//     #[test]
+//     fn test_next_coord_on_circle_circle4() {
+//         assert_eq!(
+//             CircleCoordinate {
+//                 circle: 4,
+//                 angle: Angle::new(1_u32, 5 * INNER_CIRCLE_PARTS)
+//             },
+//             next_coord_on_circle(CircleCoordinate {
+//                 circle: 4,
+//                 angle: Angle::from(0)
+//             })
+//         );
+//         assert_eq!(
+//             CircleCoordinate {
+//                 circle: 4,
+//                 angle: Angle::new(1_u32, 4 * INNER_CIRCLE_PARTS)
+//             },
+//             next_coord_on_circle(CircleCoordinate {
+//                 circle: 4,
+//                 angle: Angle::new(1_u32, 5 * INNER_CIRCLE_PARTS)
+//             })
+//         );
+//     }
+// }
