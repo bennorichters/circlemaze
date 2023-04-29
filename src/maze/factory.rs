@@ -1,5 +1,7 @@
 use std::cmp::min;
 
+use fraction::Zero;
+
 use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
 pub fn create_maze(circles: u32, inner_slices: u32) -> Vec<Border> {
@@ -92,7 +94,7 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle && self.is_on_circle_part(0, coord.angle) {
+                if coord.circle < self.outer_circle && self.is_on_circle_slice(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
@@ -102,7 +104,7 @@ impl Maze {
                 }
             }
             Direction::In => {
-                if coord.circle > 0 && self.is_on_circle_part(0, coord.angle) {
+                if coord.circle > 0 && self.is_on_circle_slice(0, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
@@ -203,9 +205,27 @@ impl Maze {
         result
     }
 
-    fn is_on_circle_part(&self, circle: u32, angle: Angle) -> bool {
+    fn is_on_circle_slice(&self, circle: u32, angle: Angle) -> bool {
         let bar = angle * Angle::from(self.steps_in_circle(circle));
         *bar.denom().unwrap() == 1
+    }
+
+    fn coords_on_circle(&self, circle: u32) -> Vec<CircleCoordinate> {
+        let mut result: Vec<CircleCoordinate> = Vec::new();
+        let mut coord = CircleCoordinate {
+            circle,
+            angle: Angle::from(0),
+        };
+
+        loop {
+            result.push(coord.to_owned());
+            coord = self.next_coord_on_circle(coord);
+            if coord.angle.is_zero() {
+                break;
+            }
+        }
+
+        result
     }
 
     fn next_coord_on_circle(&self, coord: CircleCoordinate) -> CircleCoordinate {
@@ -424,5 +444,20 @@ mod factory_tests {
         for pair in pairs() {
             assert_eq!(pair.1, maze.prev_coord_on_circle(pair.0));
         }
+    }
+
+   #[test]
+    fn test_coords_on_circle() {
+        let maze = Maze {
+            outer_circle: 10,
+            inner_slices: 7,
+            borders: vec![],
+        };
+
+        let coords = maze.coords_on_circle(0);
+        assert_eq!(7, coords.len());
+
+        let coords = maze.coords_on_circle(4);
+        assert_eq!(56, coords.len());
     }
 }
