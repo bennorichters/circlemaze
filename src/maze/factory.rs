@@ -11,7 +11,6 @@ pub fn create_maze(circles: u32, inner_slices: u32) -> Vec<Border> {
         borders: Vec::new(),
     };
     let mut open_coords = maze.all_coords();
-
     maze.close_outer_circle();
 
     while !open_coords.is_empty() {
@@ -94,7 +93,9 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle && self.is_on_circle_slice(0, coord.angle) {
+                if coord.circle < self.outer_circle
+                    && self.is_on_circle_slice(coord.circle, coord.angle)
+                {
                     Some(CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
@@ -104,7 +105,7 @@ impl Maze {
                 }
             }
             Direction::In => {
-                if coord.circle > 0 && self.is_on_circle_slice(0, coord.angle) {
+                if coord.circle > 0 && self.is_on_circle_slice(coord.circle - 1, coord.angle) {
                     Some(CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
@@ -113,30 +114,8 @@ impl Maze {
                     None
                 }
             }
-            Direction::Clockwise => {
-                let next_angle =
-                    coord.angle + Angle::new(1_u32, self.steps_in_circle(coord.circle));
-                Some(CircleCoordinate {
-                    circle: coord.circle,
-                    angle: if next_angle == Angle::from(1) {
-                        Angle::from(0)
-                    } else {
-                        next_angle
-                    },
-                })
-            }
-            Direction::CounterClockwise => {
-                let prev_angle =
-                    coord.angle - Angle::new(1_u32, self.steps_in_circle(coord.circle));
-                Some(CircleCoordinate {
-                    circle: coord.circle,
-                    angle: if prev_angle < Angle::from(0) {
-                        Angle::from(1) + prev_angle
-                    } else {
-                        prev_angle
-                    },
-                })
-            }
+            Direction::Clockwise => Some(self.next_coord_on_circle(coord)),
+            Direction::CounterClockwise => Some(self.prev_coord_on_circle(coord)),
         }
     }
 
@@ -185,29 +164,23 @@ impl Maze {
             .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
 
-    fn steps_in_circle(&self, circle: u32) -> u32 {
+    fn slices_on_circle(&self, circle: u32) -> u32 {
         (circle + 1) * self.inner_slices
+    }
+
+    fn is_on_circle_slice(&self, circle: u32, angle: Angle) -> bool {
+        let bar = angle * Angle::from(self.slices_on_circle(circle));
+        *bar.denom().unwrap() == 1
     }
 
     fn all_coords(&self) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
 
         for circle in 0..self.outer_circle {
-            let denominator = self.steps_in_circle(circle);
-            for step in 0..denominator {
-                result.push(CircleCoordinate {
-                    circle,
-                    angle: Angle::new(step, denominator),
-                });
-            }
+            result.extend(self.coords_on_circle(circle));
         }
 
         result
-    }
-
-    fn is_on_circle_slice(&self, circle: u32, angle: Angle) -> bool {
-        let bar = angle * Angle::from(self.steps_in_circle(circle));
-        *bar.denom().unwrap() == 1
     }
 
     fn coords_on_circle(&self, circle: u32) -> Vec<CircleCoordinate> {
@@ -219,7 +192,7 @@ impl Maze {
 
         loop {
             result.push(coord.to_owned());
-            coord = self.next_coord_on_circle(coord);
+            coord = self.next_coord_on_circle(&coord);
             if coord.angle.is_zero() {
                 break;
             }
@@ -228,7 +201,7 @@ impl Maze {
         result
     }
 
-    fn next_coord_on_circle(&self, coord: CircleCoordinate) -> CircleCoordinate {
+    fn next_coord_on_circle(&self, coord: &CircleCoordinate) -> CircleCoordinate {
         if coord.circle == 0 {
             return CircleCoordinate {
                 circle: 0,
@@ -261,10 +234,9 @@ impl Maze {
         }
     }
 
-    fn prev_coord_on_circle(&self, coord: CircleCoordinate) -> CircleCoordinate {
-        println!("{:?}", coord);
+    fn prev_coord_on_circle(&self, coord: &CircleCoordinate) -> CircleCoordinate {
         if *coord.angle.numer().unwrap() == 0 {
-            let steps = self.steps_in_circle(coord.circle);
+            let steps = self.slices_on_circle(coord.circle);
             return CircleCoordinate {
                 circle: coord.circle,
                 angle: Angle::new(steps - 1, steps),
@@ -429,7 +401,7 @@ mod factory_tests {
         };
 
         for pair in pairs() {
-            assert_eq!(pair.0, maze.next_coord_on_circle(pair.1));
+            assert_eq!(pair.0, maze.next_coord_on_circle(&pair.1));
         }
     }
 
@@ -442,11 +414,11 @@ mod factory_tests {
         };
 
         for pair in pairs() {
-            assert_eq!(pair.1, maze.prev_coord_on_circle(pair.0));
+            assert_eq!(pair.1, maze.prev_coord_on_circle(&pair.0));
         }
     }
 
-   #[test]
+    #[test]
     fn test_coords_on_circle() {
         let maze = Maze {
             outer_circle: 10,
