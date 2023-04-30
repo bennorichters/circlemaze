@@ -83,5 +83,7 @@ mod components_test {
         on_grid_fail(1, 1, 3, 3, 1.);
         on_grid_fail(1, 1, 3, 3, 0.334);
         on_grid_fail(1, 2, 3, 3, 0.334);
+
+        on_grid_fail(2, 9, 14, 7, 0.2);
     }
 }
