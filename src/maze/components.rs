@@ -32,15 +32,25 @@ pub struct CircleCoordinate {
 
 impl CircleCoordinate {
     pub fn is_on_grid(&self, slices: u32, min_dist: f64) -> bool {
-        let numer = *self.angle.numer().unwrap();
         let denom = self.angle.denom().unwrap();
+        if ((self.circle + 1) * slices) % denom == 0 {
+            return true;
+        }
 
-        self.angle.is_zero()
-            || ((denom % slices == 0)
-                && ((denom % (self.circle + 1) == 0)
-                    || ((denom % self.circle == 0)
-                        && Angle::new(numer, slices).to_f64().unwrap() >= min_dist
-                        && Angle::new(slices - numer, slices).to_f64().unwrap() >= min_dist)))
+        if self.circle == 0 {
+            return false;
+        }
+
+        if (self.circle * slices) % denom != 0 {
+            return false;
+        }
+
+        let section = (self.angle * slices).floor().to_u32().unwrap();
+        let angle_in_section = self.angle - Angle::new(section, slices * self.circle);
+        let n = *angle_in_section.numer().unwrap();
+
+        Angle::new(n, slices).to_f64().unwrap() >= min_dist
+            && Angle::new(slices - n, slices).to_f64().unwrap() >= min_dist
     }
 }
 
@@ -76,14 +86,20 @@ mod components_test {
         on_grid_pass(1, 1, 6, 3, 0.);
         on_grid_pass(1, 5, 6, 3, 0.);
         on_grid_pass(1, 1, 3, 3, 0.);
+        
         on_grid_pass(1, 1, 3, 3, 0.33);
         on_grid_pass(1, 2, 3, 3, 0.33);
 
         on_grid_fail(0, 1, 4, 3, 1.);
-        on_grid_fail(1, 1, 3, 3, 1.);
-        on_grid_fail(1, 1, 3, 3, 0.334);
-        on_grid_fail(1, 2, 3, 3, 0.334);
-
-        on_grid_fail(2, 9, 14, 7, 0.2);
+         
+        on_grid_pass(4, 1, 28, 7, 0.);
+        on_grid_fail(4, 1, 28, 7, 0.3);
+        on_grid_pass(5, 1, 35, 7, 0.);
+        on_grid_fail(5, 1, 35, 7, 0.3);
+        on_grid_pass(5, 1, 35, 7, 0.);
+        on_grid_fail(5, 1, 35, 7, 0.3);
+        on_grid_pass(5, 4, 35, 7, 0.3);
+        on_grid_pass(5, 6, 35, 7, 0.);
+        on_grid_fail(5, 6, 35, 7, 0.3);
     }
 }
