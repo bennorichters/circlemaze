@@ -47,10 +47,9 @@ impl CircleCoordinate {
 
         let section = (self.angle * slices).floor().to_u32().unwrap();
         let angle_in_section = self.angle - Angle::new(section, slices * self.circle);
-        let n = *angle_in_section.numer().unwrap();
 
-        Angle::new(n, slices).to_f64().unwrap() >= min_dist
-            && Angle::new(slices - n, slices).to_f64().unwrap() >= min_dist
+        let dist = angle_in_section.to_f64().unwrap();
+        min_dist <= dist && dist <= (1. - min_dist)
     }
 }
 
@@ -86,20 +85,22 @@ mod components_test {
         on_grid_pass(1, 1, 6, 3, 0.);
         on_grid_pass(1, 5, 6, 3, 0.);
         on_grid_pass(1, 1, 3, 3, 0.);
-        
+
         on_grid_pass(1, 1, 3, 3, 0.33);
         on_grid_pass(1, 2, 3, 3, 0.33);
 
         on_grid_fail(0, 1, 4, 3, 1.);
-         
+
         on_grid_pass(4, 1, 28, 7, 0.);
         on_grid_fail(4, 1, 28, 7, 0.3);
         on_grid_pass(5, 1, 35, 7, 0.);
         on_grid_fail(5, 1, 35, 7, 0.3);
         on_grid_pass(5, 1, 35, 7, 0.);
         on_grid_fail(5, 1, 35, 7, 0.3);
-        on_grid_pass(5, 4, 35, 7, 0.3);
+        on_grid_fail(5, 4, 35, 7, 0.3);
         on_grid_pass(5, 6, 35, 7, 0.);
         on_grid_fail(5, 6, 35, 7, 0.3);
+
+        on_grid_pass(3, 11, 21, 7, 0.2);
     }
 }
