@@ -4,10 +4,11 @@ use fraction::Zero;
 
 use super::components::{Angle, Border, BorderType, CircleCoordinate};
 
-pub fn create_maze(circles: u32, inner_slices: u32) -> Vec<Border> {
+pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
     let mut maze = Maze {
         outer_circle: circles,
         inner_slices,
+        min_dist,
         borders: Vec::new(),
     };
     let mut open_coords = maze.all_coords();
@@ -24,6 +25,7 @@ pub fn create_maze(circles: u32, inner_slices: u32) -> Vec<Border> {
 struct Maze {
     outer_circle: u32,
     inner_slices: u32,
+    min_dist: f64,
     borders: Vec<Border>,
 }
 
@@ -93,23 +95,32 @@ impl Maze {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle
-                    && self.is_on_circle_slice(coord.circle, coord.angle)
-                {
-                    Some(CircleCoordinate {
+                if coord.circle < self.outer_circle {
+                    let candidate = CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
-                    })
+                    };
+
+                    if candidate.is_on_grid(self.inner_slices, self.min_dist) {
+                        Some(candidate)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             }
             Direction::In => {
-                if coord.circle > 0 && self.is_on_circle_slice(coord.circle - 1, coord.angle) {
-                    Some(CircleCoordinate {
+                if coord.circle > 0 {
+                    let candidate = CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
-                    })
+                    };
+                    if candidate.is_on_grid(self.inner_slices, self.min_dist) {
+                        Some(candidate)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -168,11 +179,6 @@ impl Maze {
         (circle + 1) * self.inner_slices
     }
 
-    fn is_on_circle_slice(&self, circle: u32, angle: Angle) -> bool {
-        let bar = angle * Angle::from(self.slices_on_circle(circle));
-        *bar.denom().unwrap() == 1
-    }
-
     fn all_coords(&self) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
 
@@ -224,13 +230,19 @@ impl Maze {
 
         let next_numer = normalized_numer + min(diff1, diff2);
 
-        CircleCoordinate {
+        let c = CircleCoordinate {
             circle: coord.circle,
             angle: if next_numer == normalized_denom {
                 Angle::from(0)
             } else {
                 Angle::new(next_numer, normalized_denom)
             },
+        };
+
+        if c.is_on_grid(self.inner_slices, self.min_dist) {
+            c
+        } else {
+            self.next_coord_on_circle(&c)
         }
     }
 
@@ -264,9 +276,14 @@ impl Maze {
 
         let next_numer = normalized_numer - min(diff1, diff2);
 
-        CircleCoordinate {
+        let c = CircleCoordinate {
             circle: coord.circle,
             angle: Angle::new(next_numer, normalized_denom),
+        };
+        if c.is_on_grid(self.inner_slices, self.min_dist) {
+            c
+        } else {
+            self.prev_coord_on_circle(&c)
         }
     }
 }
@@ -397,10 +414,12 @@ mod factory_tests {
         let maze = Maze {
             outer_circle: 10,
             inner_slices: 7,
+            min_dist: 0.,
             borders: vec![],
         };
 
         for pair in pairs() {
+            println!("{:?}", pair);
             assert_eq!(pair.0, maze.next_coord_on_circle(&pair.1));
         }
     }
@@ -410,6 +429,7 @@ mod factory_tests {
         let maze = Maze {
             outer_circle: 10,
             inner_slices: 7,
+            min_dist: 0.,
             borders: vec![],
         };
 
@@ -423,6 +443,7 @@ mod factory_tests {
         let maze = Maze {
             outer_circle: 10,
             inner_slices: 7,
+            min_dist: 0.,
             borders: vec![],
         };
 
