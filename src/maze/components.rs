@@ -46,9 +46,10 @@ impl CircleCoordinate {
         }
 
         let section = (self.angle * slices).floor().to_u32().unwrap();
-        let angle_in_section = self.angle - Angle::new(section, slices * self.circle);
+        let angle_in_section = self.angle - Angle::new(section, slices);
+        let relative = angle_in_section * slices;
 
-        let dist = angle_in_section.to_f64().unwrap();
+        let dist = relative.to_f64().unwrap();
         min_dist <= dist && dist <= (1. - min_dist)
     }
 }
@@ -101,6 +102,7 @@ mod components_test {
         on_grid_pass(5, 6, 35, 7, 0.);
         on_grid_fail(5, 6, 35, 7, 0.3);
 
-        on_grid_pass(3, 11, 21, 7, 0.2);
+        on_grid_pass(3, 11, 21, 7, 0.3);
+        on_grid_fail(3, 11, 21, 7, 0.34);
     }
 }
