@@ -1,4 +1,4 @@
-use fraction::{GenericFraction, ToPrimitive, Zero};
+use fraction::{GenericFraction, ToPrimitive};
 
 pub type Angle = GenericFraction<u32>;
 
