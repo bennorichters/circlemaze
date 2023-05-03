@@ -1,3 +1,5 @@
+use rand::Rng;
+
 use super::{
     circular_grid::CircularGrid,
     components::{Angle, Border, BorderType, CircleCoordinate},
@@ -38,17 +40,12 @@ pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border
         },
     }];
 
-    let mut open_coords = grid.all_coords();
     let mut maze = Maze {
-        borders,
         grid: Box::new(grid),
+        borders,
     };
 
-    while !open_coords.is_empty() {
-        let coord = &open_coords[random_index(open_coords.len())];
-        let path_coords = maze.create_path(coord, &open_coords);
-        open_coords.retain(|e| !path_coords.contains(e));
-    }
+    maze.create_borders();
     maze.borders
 }
 
@@ -58,6 +55,15 @@ struct Maze {
 }
 
 impl Maze {
+    fn create_borders(&mut self) {
+        let mut open_coords = self.grid.all_coords();
+        while !open_coords.is_empty() {
+            let coord = &open_coords[rand::thread_rng().gen_range(0..open_coords.len())];
+            let path_coords = self.create_path(coord, &open_coords);
+            open_coords.retain(|e| !path_coords.contains(e));
+        }
+    }
+
     fn create_path(
         &mut self,
         start_coord: &CircleCoordinate,
@@ -135,8 +141,4 @@ fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleC
     options.push((coord.to_owned(), Direction::Out));
     options.push((coord.to_owned(), Direction::Clockwise));
     options.push((coord.to_owned(), Direction::CounterClockwise));
-}
-
-fn random_index(length: usize) -> usize {
-    (rand::random::<f32>() * length as f32).floor() as usize
 }
