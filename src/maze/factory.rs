@@ -314,98 +314,37 @@ mod factory_tests {
         factory::Maze,
     };
 
+    fn pair(
+        circle1: u32,
+        numer1: u32,
+        denom1: u32,
+        circle2: u32,
+        numer2: u32,
+        denom2: u32,
+    ) -> (CircleCoordinate, CircleCoordinate) {
+        (
+            CircleCoordinate {
+                circle: circle1,
+                angle: Angle::new(numer1, denom1),
+            },
+            CircleCoordinate {
+                circle: circle2,
+                angle: Angle::new(numer2, denom2),
+            },
+        )
+    }
+
     fn pairs() -> Vec<(CircleCoordinate, CircleCoordinate)> {
         vec![
-            (
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::new(1_u32, 7_u32),
-                },
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::from(0),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::new(2_u32, 7_u32),
-                },
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::new(1_u32, 7_u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::from(0),
-                },
-                CircleCoordinate {
-                    circle: 0,
-                    angle: Angle::new(6_u32, 7_u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, (5 * 7) as u32),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::from(0),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, (4 * 7) as u32),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, (5 * 7) as u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(2_u32, (5 * 7) as u32),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, (4 * 7) as u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, 2_u32),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(17_u32, (5 * 7) as u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(18_u32, (5 * 7) as u32),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(1_u32, 2_u32),
-                },
-            ),
-            (
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::from(0),
-                },
-                CircleCoordinate {
-                    circle: 4,
-                    angle: Angle::new(34_u32, (5 * 7) as u32),
-                },
-            ),
+            pair(0, 1, 7, 0, 0, 1),
+            pair(0, 2, 7, 0, 1, 7),
+            pair(0, 0, 1, 0, 6, 7),
+            pair(4, 1, 35, 4, 0, 1),
+            pair(4, 1, 28, 4, 1, 35),
+            pair(4, 2, 35, 4, 1, 28),
+            pair(4, 1, 2, 4, 17, 35),
+            pair(4, 18, 35, 4, 1, 2),
+            pair(4, 0, 1, 4, 34, 35),
         ]
     }
 
