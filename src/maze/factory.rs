@@ -12,6 +12,7 @@ pub enum Direction {
 }
 
 pub trait Grid {
+    fn all_coords(&self) -> Vec<CircleCoordinate>;
     fn next(
         &self,
         options: &mut Vec<(CircleCoordinate, Direction)>,
@@ -38,7 +39,10 @@ pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border
     }];
 
     let mut open_coords = grid.all_coords();
-    let mut maze = Maze { borders, grid };
+    let mut maze = Maze {
+        borders,
+        grid: Box::new(grid),
+    };
 
     while !open_coords.is_empty() {
         let coord = &open_coords[random_index(open_coords.len())];
@@ -49,7 +53,7 @@ pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border
 }
 
 struct Maze {
-    grid: CircularGrid,
+    grid: Box<dyn Grid>,
     borders: Vec<Border>,
 }
 

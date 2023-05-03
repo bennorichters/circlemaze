@@ -14,16 +14,6 @@ pub struct CircularGrid {
 }
 
 impl CircularGrid {
-    pub fn all_coords(&self) -> Vec<CircleCoordinate> {
-        let mut result: Vec<CircleCoordinate> = Vec::new();
-
-        for circle in 0..self.outer_circle {
-            result.extend(self.coords_on_circle(circle));
-        }
-
-        result
-    }
-
     fn coords_on_circle(&self, circle: u32) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
         let mut coord = CircleCoordinate {
@@ -170,6 +160,16 @@ impl CircularGrid {
 }
 
 impl Grid for CircularGrid {
+    fn all_coords(&self) -> Vec<CircleCoordinate> {
+        let mut result: Vec<CircleCoordinate> = Vec::new();
+
+        for circle in 0..self.outer_circle {
+            result.extend(self.coords_on_circle(circle));
+        }
+
+        result
+    }
+
     fn next(
         &self,
         options: &mut Vec<(CircleCoordinate, Direction)>,
