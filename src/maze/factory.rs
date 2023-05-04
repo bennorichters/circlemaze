@@ -1,5 +1,3 @@
-use rand::Rng;
-
 use super::{
     circular_grid::CircularGrid,
     components::{Angle, Border, BorderType, CircleCoordinate},
@@ -15,11 +13,11 @@ pub enum Direction {
 
 pub trait Grid {
     fn all_coords(&self) -> Vec<CircleCoordinate>;
-    fn next(
+    fn neighbour(
         &self,
-        options: &mut Vec<(CircleCoordinate, Direction)>,
-        current_path: &[CircleCoordinate],
-    ) -> (CircleCoordinate, CircleCoordinate, Direction);
+        coord: &CircleCoordinate,
+        direction: &Direction,
+    ) -> Option<CircleCoordinate>;
 }
 
 pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
@@ -58,7 +56,7 @@ impl Maze {
     fn create_borders(&mut self) {
         let mut open_coords = self.grid.all_coords();
         while !open_coords.is_empty() {
-            let coord = &open_coords[rand::thread_rng().gen_range(0..open_coords.len())];
+            let coord = &open_coords[random_index(open_coords.len())];
             let path_coords = self.create_path(coord, &open_coords);
             open_coords.retain(|e| !path_coords.contains(e));
         }
@@ -74,7 +72,7 @@ impl Maze {
         let mut coord = start_coord.to_owned();
         while open_coords.contains(&coord) {
             add_options(&mut options, &coord);
-            let (from_coord, to_coord, direction) = self.grid.next(&mut options, &visited);
+            let (from_coord, to_coord, direction) = self.next(&mut options, &visited);
             coord = to_coord.to_owned();
 
             visited.push(to_coord.to_owned());
@@ -88,6 +86,25 @@ impl Maze {
         }
 
         visited
+    }
+
+    fn next(
+        &self,
+        options: &mut Vec<(CircleCoordinate, Direction)>,
+        current_path: &[CircleCoordinate],
+    ) -> (CircleCoordinate, CircleCoordinate, Direction) {
+        while !options.is_empty() {
+            let (candidate_start, candidate_direction) =
+                options.remove(random_index(options.len()));
+            let neighbour = self.grid.neighbour(&candidate_start, &candidate_direction);
+            if let Some(end) = neighbour {
+                if !current_path.contains(&end) {
+                    return (candidate_start, end, candidate_direction);
+                }
+            }
+        }
+
+        panic!();
     }
 
     fn merge_borders(
@@ -134,6 +151,10 @@ impl Maze {
             .iter()
             .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
+}
+
+fn random_index(length: usize) -> usize {
+    (rand::random::<f32>() * length as f32).floor() as usize
 }
 
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {

@@ -115,6 +115,18 @@ impl CircularGrid {
     fn slices_on_circle(&self, circle: u32) -> u32 {
         (circle + 1) * self.inner_slices
     }
+}
+
+impl Grid for CircularGrid {
+    fn all_coords(&self) -> Vec<CircleCoordinate> {
+        let mut result: Vec<CircleCoordinate> = Vec::new();
+
+        for circle in 0..self.outer_circle {
+            result.extend(self.coords_on_circle(circle));
+        }
+
+        result
+    }
 
     fn neighbour(
         &self,
@@ -157,41 +169,6 @@ impl CircularGrid {
             Direction::CounterClockwise => Some(self.prev_coord_on_circle(coord)),
         }
     }
-}
-
-impl Grid for CircularGrid {
-    fn all_coords(&self) -> Vec<CircleCoordinate> {
-        let mut result: Vec<CircleCoordinate> = Vec::new();
-
-        for circle in 0..self.outer_circle {
-            result.extend(self.coords_on_circle(circle));
-        }
-
-        result
-    }
-
-    fn next(
-        &self,
-        options: &mut Vec<(CircleCoordinate, Direction)>,
-        current_path: &[CircleCoordinate],
-    ) -> (CircleCoordinate, CircleCoordinate, Direction) {
-        while !options.is_empty() {
-            let (candidate_start, candidate_direction) =
-                options.remove(random_index(options.len()));
-            let neighbour = self.neighbour(&candidate_start, &candidate_direction);
-            if let Some(end) = neighbour {
-                if !current_path.contains(&end) {
-                    return (candidate_start, end, candidate_direction);
-                }
-            }
-        }
-
-        panic!();
-    }
-}
-
-fn random_index(length: usize) -> usize {
-    (rand::random::<f32>() * length as f32).floor() as usize
 }
 
 #[cfg(test)]
