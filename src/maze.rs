@@ -1,3 +1,3 @@
 pub mod components;
-pub mod factory;
+pub mod maze_builder;
 pub mod circular_grid;

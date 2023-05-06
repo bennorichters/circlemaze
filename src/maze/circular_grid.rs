@@ -4,7 +4,7 @@ use fraction::Zero;
 
 use super::{
     components::{Angle, CircleCoordinate},
-    factory::{Direction, Grid},
+    maze_builder::{Direction, Grid},
 };
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
@@ -203,7 +203,7 @@ mod factory_tests {
     use crate::maze::{
         circular_grid::Builder,
         components::{Angle, CircleCoordinate},
-        factory::{Direction, Grid},
+        maze_builder::{Direction, Grid},
     };
 
     use super::build;

@@ -20,7 +20,7 @@ pub trait Grid {
     ) -> Option<CircleCoordinate>;
 }
 
-pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
+pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
     let grid = circular_grid::build(circles, inner_slices, min_dist);
 
     let borders: Vec<Border> = vec![Border {
@@ -34,7 +34,7 @@ pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border
         },
     }];
 
-    let mut maze = Maze {
+    let mut maze = MazeBuilder {
         grid: Box::new(grid),
         borders,
     };
@@ -43,12 +43,12 @@ pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border
     maze.borders
 }
 
-struct Maze {
+struct MazeBuilder {
     grid: Box<dyn Grid>,
     borders: Vec<Border>,
 }
 
-impl Maze {
+impl MazeBuilder {
     fn create_borders(&mut self) {
         let mut open_coords = self.grid.all_coords();
         while !open_coords.is_empty() {
