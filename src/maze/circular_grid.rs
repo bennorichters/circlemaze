@@ -201,8 +201,9 @@ impl Grid for CircularGrid {
 #[cfg(test)]
 mod factory_tests {
     use crate::maze::{
+        circular_grid::Builder,
         components::{Angle, CircleCoordinate},
-        factory::{Direction, Grid}, circular_grid::Builder,
+        factory::{Direction, Grid},
     };
 
     use super::build;
@@ -227,7 +228,7 @@ mod factory_tests {
         )
     }
 
-    fn pairs() -> Vec<(CircleCoordinate, CircleCoordinate)> {
+    fn clockwise_pairs() -> Vec<(CircleCoordinate, CircleCoordinate)> {
         vec![
             pair(0, 1, 7, 0, 0, 1),
             pair(0, 2, 7, 0, 1, 7),
@@ -242,10 +243,10 @@ mod factory_tests {
     }
 
     #[test]
-    fn test_next_coord_on_circle() {
+    fn test_neighbour_clockwise() {
         let grid = build(10, 7, 0.);
 
-        for pair in pairs() {
+        for pair in clockwise_pairs() {
             println!("{:?}", pair);
             assert_eq!(
                 pair.0,
@@ -255,16 +256,24 @@ mod factory_tests {
     }
 
     #[test]
-    fn test_prev_coord_on_circle() {
+    fn test_neighbour_counter_clockwise() {
         let grid = build(10, 7, 0.);
 
-        for pair in pairs() {
+        for pair in clockwise_pairs() {
             assert_eq!(
                 pair.1,
                 grid.neighbour(&pair.0, &Direction::CounterClockwise)
                     .unwrap()
             );
         }
+    }
+
+    #[test]
+    fn test_neighbour_out_in() {
+        let grid = build(10, 7, 0.);
+        let pair = pair(10, 0, 1, 9, 0, 1);
+        assert_eq!(pair.0, grid.neighbour(&pair.1, &Direction::Out).unwrap());
+        assert_eq!(pair.1, grid.neighbour(&pair.0, &Direction::In).unwrap());
     }
 
     #[test]
