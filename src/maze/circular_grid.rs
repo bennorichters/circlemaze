@@ -8,7 +8,7 @@ use super::{
 };
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
-    let builder = Builder {
+    let builder = CircularGridBuilder {
         inner_slices,
         min_dist,
     };
@@ -21,12 +21,12 @@ pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGri
     CircularGrid { coords }
 }
 
-struct Builder {
+struct CircularGridBuilder {
     inner_slices: u32,
     min_dist: f64,
 }
 
-impl Builder {
+impl CircularGridBuilder {
     fn coords_on_circle(&self, circle: u32) -> Vec<Angle> {
         let mut result: Vec<Angle> = Vec::new();
         let mut coord = CircleCoordinate {
@@ -201,7 +201,7 @@ impl Grid for CircularGrid {
 #[cfg(test)]
 mod factory_tests {
     use crate::maze::{
-        circular_grid::Builder,
+        circular_grid::CircularGridBuilder,
         components::{Angle, CircleCoordinate},
         maze_builder::{Direction, Grid},
     };
@@ -266,7 +266,7 @@ mod factory_tests {
 
     #[test]
     fn test_coords_on_circle() {
-        let builder = Builder {
+        let builder = CircularGridBuilder {
             inner_slices: 7,
             min_dist: 0.,
         };
