@@ -52,7 +52,7 @@ impl MazeBuilder {
     fn create_borders(&mut self) {
         let mut open_coords = self.grid.all_coords();
         while !open_coords.is_empty() {
-            let coord = &open_coords[random_index(open_coords.len())];
+            let coord = &open_coords[random_nr(open_coords.len())];
             let path_coords = self.create_path(coord, &open_coords);
             open_coords.retain(|e| !path_coords.contains(e));
         }
@@ -91,7 +91,7 @@ impl MazeBuilder {
     ) -> (CircleCoordinate, CircleCoordinate, Direction) {
         while !options.is_empty() {
             let (candidate_start, candidate_direction) =
-                options.remove(random_index(options.len()));
+                options.remove(random_nr(options.len()));
             let neighbour = self.grid.neighbour(&candidate_start, &candidate_direction);
             if let Some(end) = neighbour {
                 if !current_path.contains(&end) {
@@ -149,8 +149,8 @@ impl MazeBuilder {
     }
 }
 
-fn random_index(length: usize) -> usize {
-    (rand::random::<f32>() * length as f32).floor() as usize
+fn random_nr(upper_bound: usize) -> usize {
+    (rand::random::<f32>() * upper_bound as f32).floor() as usize
 }
 
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
