@@ -1,5 +1,5 @@
 use super::{
-    circular_grid::CircularGrid,
+    circular_grid,
     components::{Angle, Border, BorderType, CircleCoordinate},
 };
 
@@ -21,11 +21,7 @@ pub trait Grid {
 }
 
 pub fn create_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
-    let grid = CircularGrid {
-        outer_circle: circles,
-        inner_slices,
-        min_dist,
-    };
+    let grid = circular_grid::build(circles, inner_slices, min_dist);
 
     let borders: Vec<Border> = vec![Border {
         start: CircleCoordinate {

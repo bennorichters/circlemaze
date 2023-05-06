@@ -1,4 +1,4 @@
-use std::cmp::min;
+use std::{cmp::min, collections::HashMap};
 
 use fraction::Zero;
 
@@ -7,40 +7,54 @@ use super::{
     factory::{Direction, Grid},
 };
 
-pub struct CircularGrid {
-    pub outer_circle: u32,
-    pub inner_slices: u32,
-    pub min_dist: f64,
+pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
+    let builder = Builder {
+        inner_slices,
+        min_dist,
+    };
+
+    let mut coords: HashMap<u32, Vec<Angle>> = HashMap::new();
+    for circle in 0..=outer_circle {
+        coords.insert(circle, builder.coords_on_circle(circle));
+    }
+
+    CircularGrid { coords }
 }
 
-impl CircularGrid {
-    fn coords_on_circle(&self, circle: u32) -> Vec<CircleCoordinate> {
-        let mut result: Vec<CircleCoordinate> = Vec::new();
+struct Builder {
+    inner_slices: u32,
+    min_dist: f64,
+}
+
+impl Builder {
+    fn coords_on_circle(&self, circle: u32) -> Vec<Angle> {
+        let mut result: Vec<Angle> = Vec::new();
         let mut coord = CircleCoordinate {
             circle,
             angle: Angle::from(0),
         };
 
         loop {
-            result.push(coord.to_owned());
-            coord = self.next_coord_on_circle(&coord);
-            if coord.angle.is_zero() {
+            result.push(coord.angle.to_owned());
+            let angle = self.next_coord_on_circle(&coord);
+            if angle.is_zero() {
                 break;
             }
+            coord = CircleCoordinate {
+                circle: coord.circle,
+                angle,
+            };
         }
 
         result
     }
 
-    fn next_coord_on_circle(&self, coord: &CircleCoordinate) -> CircleCoordinate {
+    fn next_coord_on_circle(&self, coord: &CircleCoordinate) -> Angle {
         if coord.circle == 0 {
-            return CircleCoordinate {
-                circle: 0,
-                angle: if coord.angle == Angle::new(self.inner_slices - 1, self.inner_slices) {
-                    Angle::from(0)
-                } else {
-                    coord.angle + Angle::new(1_u32, self.inner_slices)
-                },
+            return if coord.angle == Angle::new(self.inner_slices - 1, self.inner_slices) {
+                Angle::from(0)
+            } else {
+                coord.angle + Angle::new(1_u32, self.inner_slices)
             };
         }
 
@@ -65,55 +79,25 @@ impl CircularGrid {
         };
 
         if c.is_on_grid(self.inner_slices, self.min_dist) {
-            c
+            c.angle
         } else {
             self.next_coord_on_circle(&c)
         }
     }
+}
 
-    fn prev_coord_on_circle(&self, coord: &CircleCoordinate) -> CircleCoordinate {
-        if *coord.angle.numer().unwrap() == 0 {
-            let steps = self.slices_on_circle(coord.circle);
-            return CircleCoordinate {
-                circle: coord.circle,
-                angle: Angle::new(steps - 1, steps),
-            };
-        }
+pub struct CircularGrid {
+    coords: HashMap<u32, Vec<Angle>>,
+}
 
-        if coord.circle == 0 {
-            return CircleCoordinate {
-                circle: 0,
-                angle: coord.angle - Angle::new(1_u32, self.inner_slices),
-            };
-        }
-
-        let n = coord.angle.numer().unwrap();
-        let d = coord.angle.denom().unwrap();
-
-        let normalized_denom = coord.circle * (coord.circle + 1) * self.inner_slices;
-        let normalized_numer = n * (normalized_denom / d);
-
-        let diff1 = normalized_numer % coord.circle;
-        let diff2 = normalized_numer % (coord.circle + 1);
-
-        let diff1 = if diff1 == 0 { coord.circle } else { diff1 };
-        let diff2 = if diff2 == 0 { coord.circle + 1 } else { diff2 };
-
-        let next_numer = normalized_numer - min(diff1, diff2);
-
-        let c = CircleCoordinate {
-            circle: coord.circle,
-            angle: Angle::new(next_numer, normalized_denom),
-        };
-        if c.is_on_grid(self.inner_slices, self.min_dist) {
-            c
+impl CircularGrid {
+    fn find(&self, circle: u32, angle: &Angle) -> Option<usize> {
+        let angles_option = self.coords.get(&(circle));
+        if let Some(angles) = angles_option {
+            angles.binary_search(angle).ok()
         } else {
-            self.prev_coord_on_circle(&c)
+            None
         }
-    }
-
-    fn slices_on_circle(&self, circle: u32) -> u32 {
-        (circle + 1) * self.inner_slices
     }
 }
 
@@ -121,8 +105,17 @@ impl Grid for CircularGrid {
     fn all_coords(&self) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
 
-        for circle in 0..self.outer_circle {
-            result.extend(self.coords_on_circle(circle));
+        let outer = *self.coords.keys().max().unwrap();
+        for circle in 0..outer {
+            let angles_on_circle = self.coords.get(&circle).unwrap();
+            let coords_on_circle: Vec<CircleCoordinate> = angles_on_circle
+                .iter()
+                .map(|angle| CircleCoordinate {
+                    circle,
+                    angle: *angle,
+                })
+                .collect();
+            result.extend(coords_on_circle);
         }
 
         result
@@ -135,47 +128,84 @@ impl Grid for CircularGrid {
     ) -> Option<CircleCoordinate> {
         match direction {
             Direction::Out => {
-                if coord.circle < self.outer_circle {
-                    let candidate = CircleCoordinate {
+                let index_option = self.find(coord.circle + 1, &coord.angle);
+                if index_option.is_some() {
+                    Some(CircleCoordinate {
                         circle: coord.circle + 1,
                         angle: coord.angle.to_owned(),
-                    };
-
-                    if candidate.is_on_grid(self.inner_slices, self.min_dist) {
-                        Some(candidate)
-                    } else {
-                        None
-                    }
+                    })
                 } else {
                     None
                 }
             }
             Direction::In => {
-                if coord.circle > 0 {
-                    let candidate = CircleCoordinate {
+                if coord.circle == 0 {
+                    return None;
+                }
+                let index_option = self.find(coord.circle - 1, &coord.angle);
+                if index_option.is_some() {
+                    Some(CircleCoordinate {
                         circle: coord.circle - 1,
                         angle: coord.angle.to_owned(),
-                    };
-                    if candidate.is_on_grid(self.inner_slices, self.min_dist) {
-                        Some(candidate)
-                    } else {
+                    })
+                } else {
+                    None
+                }
+            }
+            Direction::Clockwise => {
+                let index_option = self.find(coord.circle, &coord.angle);
+                if let Some(index) = index_option {
+                    let angles = self.coords.get(&coord.circle).unwrap();
+                    if angles.len() == 1 {
                         None
+                    } else {
+                        let n = if index == angles.len() - 1 {
+                            0
+                        } else {
+                            index + 1
+                        };
+                        Some(CircleCoordinate {
+                            circle: coord.circle,
+                            angle: angles[n].to_owned(),
+                        })
                     }
                 } else {
                     None
                 }
             }
-            Direction::Clockwise => Some(self.next_coord_on_circle(coord)),
-            Direction::CounterClockwise => Some(self.prev_coord_on_circle(coord)),
+            Direction::CounterClockwise => {
+                let index_option = self.find(coord.circle, &coord.angle);
+                if let Some(index) = index_option {
+                    let angles = self.coords.get(&coord.circle).unwrap();
+                    if angles.len() == 1 {
+                        None
+                    } else {
+                        let n = if index == 0 {
+                            angles.len() - 1
+                        } else {
+                            index - 1
+                        };
+                        Some(CircleCoordinate {
+                            circle: coord.circle,
+                            angle: angles[n].to_owned(),
+                        })
+                    }
+                } else {
+                    None
+                }
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod factory_tests {
-    use crate::maze::components::{Angle, CircleCoordinate};
+    use crate::maze::{
+        components::{Angle, CircleCoordinate},
+        factory::{Direction, Grid}, circular_grid::Builder,
+    };
 
-    use super::CircularGrid;
+    use super::build;
 
     fn pair(
         circle1: u32,
@@ -213,43 +243,41 @@ mod factory_tests {
 
     #[test]
     fn test_next_coord_on_circle() {
-        let maze = CircularGrid {
-            outer_circle: 10,
-            inner_slices: 7,
-            min_dist: 0.,
-        };
+        let grid = build(10, 7, 0.);
 
         for pair in pairs() {
             println!("{:?}", pair);
-            assert_eq!(pair.0, maze.next_coord_on_circle(&pair.1));
+            assert_eq!(
+                pair.0,
+                grid.neighbour(&pair.1, &Direction::Clockwise).unwrap()
+            );
         }
     }
 
     #[test]
     fn test_prev_coord_on_circle() {
-        let maze = CircularGrid {
-            outer_circle: 10,
-            inner_slices: 7,
-            min_dist: 0.,
-        };
+        let grid = build(10, 7, 0.);
 
         for pair in pairs() {
-            assert_eq!(pair.1, maze.prev_coord_on_circle(&pair.0));
+            assert_eq!(
+                pair.1,
+                grid.neighbour(&pair.0, &Direction::CounterClockwise)
+                    .unwrap()
+            );
         }
     }
 
     #[test]
     fn test_coords_on_circle() {
-        let maze = CircularGrid {
-            outer_circle: 10,
+        let builder = Builder {
             inner_slices: 7,
             min_dist: 0.,
         };
 
-        let coords = maze.coords_on_circle(0);
+        let coords = builder.coords_on_circle(0);
         assert_eq!(7, coords.len());
 
-        let coords = maze.coords_on_circle(4);
+        let coords = builder.coords_on_circle(4);
         assert_eq!(56, coords.len());
     }
 }
