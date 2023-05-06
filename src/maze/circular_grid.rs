@@ -228,8 +228,11 @@ mod factory_tests {
         )
     }
 
-    fn clockwise_pairs() -> Vec<(CircleCoordinate, CircleCoordinate)> {
-        vec![
+    #[test]
+    fn test_neighbour_clockwise() {
+        let grid = build(10, 7, 0.);
+
+        for pair in vec![
             pair(0, 1, 7, 0, 0, 1),
             pair(0, 2, 7, 0, 1, 7),
             pair(0, 0, 1, 0, 6, 7),
@@ -239,27 +242,12 @@ mod factory_tests {
             pair(4, 1, 2, 4, 17, 35),
             pair(4, 18, 35, 4, 1, 2),
             pair(4, 0, 1, 4, 34, 35),
-        ]
-    }
-
-    #[test]
-    fn test_neighbour_clockwise() {
-        let grid = build(10, 7, 0.);
-
-        for pair in clockwise_pairs() {
+        ] {
             println!("{:?}", pair);
             assert_eq!(
                 pair.0,
                 grid.neighbour(&pair.1, &Direction::Clockwise).unwrap()
             );
-        }
-    }
-
-    #[test]
-    fn test_neighbour_counter_clockwise() {
-        let grid = build(10, 7, 0.);
-
-        for pair in clockwise_pairs() {
             assert_eq!(
                 pair.1,
                 grid.neighbour(&pair.0, &Direction::CounterClockwise)
