@@ -2,7 +2,7 @@ use std::{cmp::min, collections::HashMap};
 
 use fraction::{ToPrimitive, Zero};
 
-use super::components::{Angle, CircleCoordinate, Direction, Grid};
+use super::components::{random_nr, Angle, CircleCoordinate, Direction, Grid};
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
     let builder = CircularGridBuilder {
@@ -214,6 +214,17 @@ impl Grid for CircularGrid {
                 }
             }
         }
+    }
+
+    fn take(&self, borders: &Vec<super::components::Border>) -> CircleCoordinate {
+        let cs = self.all_coords();
+        let f: Vec<CircleCoordinate> = cs
+            .iter()
+            .filter(|&c| !borders.iter().any(|b| b.contains(c)))
+            .cloned()
+            .collect();
+
+        f[random_nr(f.len())].clone()
     }
 }
 

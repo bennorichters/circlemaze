@@ -1,6 +1,6 @@
 use super::{
     circular_grid,
-    components::{Angle, Border, BorderType, CircleCoordinate, Grid, Direction},
+    components::{Angle, Border, BorderType, CircleCoordinate, Grid, Direction, random_nr},
 };
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
@@ -130,10 +130,6 @@ impl MazeBuilder {
             .iter()
             .position(|b| &b.border_type() == border_type && &b.start == to_coord)
     }
-}
-
-fn random_nr(upper_bound: usize) -> usize {
-    (rand::random::<f32>() * upper_bound as f32).floor() as usize
 }
 
 fn add_options(options: &mut Vec<(CircleCoordinate, Direction)>, coord: &CircleCoordinate) {
