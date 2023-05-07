@@ -1,24 +1,7 @@
 use super::{
     circular_grid,
-    components::{Angle, Border, BorderType, CircleCoordinate},
+    components::{Angle, Border, BorderType, CircleCoordinate, Grid, Direction},
 };
-
-#[derive(Debug)]
-pub enum Direction {
-    Out,
-    In,
-    Clockwise,
-    CounterClockwise,
-}
-
-pub trait Grid {
-    fn all_coords(&self) -> Vec<CircleCoordinate>;
-    fn neighbour(
-        &self,
-        coord: &CircleCoordinate,
-        direction: &Direction,
-    ) -> Option<CircleCoordinate>;
-}
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
     let grid = circular_grid::build(circles, inner_slices, min_dist);

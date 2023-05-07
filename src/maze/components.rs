@@ -1,5 +1,22 @@
 use fraction::GenericFraction;
 
+#[derive(Debug)]
+pub enum Direction {
+    Out,
+    In,
+    Clockwise,
+    CounterClockwise,
+}
+
+pub trait Grid {
+    fn all_coords(&self) -> Vec<CircleCoordinate>;
+    fn neighbour(
+        &self,
+        coord: &CircleCoordinate,
+        direction: &Direction,
+    ) -> Option<CircleCoordinate>;
+}
+
 pub type Angle = GenericFraction<u32>;
 
 #[derive(Debug, PartialEq)]

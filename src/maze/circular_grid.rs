@@ -2,10 +2,7 @@ use std::{cmp::min, collections::HashMap};
 
 use fraction::{ToPrimitive, Zero};
 
-use super::{
-    components::{Angle, CircleCoordinate},
-    maze_builder::{Direction, Grid},
-};
+use super::components::{Angle, CircleCoordinate, Direction, Grid};
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
     let builder = CircularGridBuilder {
@@ -224,8 +221,7 @@ impl Grid for CircularGrid {
 mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
-        components::{Angle, CircleCoordinate},
-        maze_builder::{Direction, Grid},
+        components::{Angle, CircleCoordinate, Direction, Grid},
     };
 
     use super::build;
