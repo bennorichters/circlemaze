@@ -22,6 +22,10 @@ impl Border {
             BorderType::Line
         }
     }
+
+    pub fn contains(&self, coord: CircleCoordinate) -> bool {
+        todo!();
+    }
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -36,6 +40,13 @@ mod components_test {
 
     use super::{Angle, Border, CircleCoordinate};
 
+    fn create_coord(circle: u32, numer: u32, denom: u32) -> CircleCoordinate {
+        CircleCoordinate {
+            circle,
+            angle: Angle::new(numer, denom),
+        }
+    }
+
     fn create_border(
         circle1: u32,
         numer1: u32,
@@ -45,14 +56,8 @@ mod components_test {
         denom2: u32,
     ) -> Border {
         Border {
-            start: CircleCoordinate {
-                circle: circle1,
-                angle: Angle::new(numer1, denom1),
-            },
-            end: CircleCoordinate {
-                circle: circle2,
-                angle: Angle::new(numer2, denom2),
-            },
+            start: create_coord(circle1, numer1, denom1),
+            end: create_coord(circle2, numer2, denom2),
         }
     }
 
@@ -70,5 +75,32 @@ mod components_test {
             BorderType::Line,
             create_border(0, 0, 1, 5, 0, 1).border_type()
         );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_border_contains() {
+        assert!(create_border(0, 0, 1, 0, 1, 10).contains(create_coord(0, 1, 20)));
+        assert!(!create_border(0, 0, 1, 0, 1, 20).contains(create_coord(0, 1, 10)));
+
+        assert!(create_border(0, 0, 1, 0, 0, 1).contains(create_coord(0, 1, 20)));
+        assert!(!create_border(0, 0, 1, 0, 0, 1).contains(create_coord(1, 1, 10)));
+
+        assert!(!create_border(1, 0, 1, 5, 0, 1).contains(create_coord(0, 0, 1)));
+        assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(1, 0, 1)));
+        assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(2, 0, 1)));
+        assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(3, 0, 1)));
+        assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(4, 0, 1)));
+        assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(5, 0, 1)));
+        assert!(!create_border(1, 0, 1, 5, 0, 1).contains(create_coord(6, 0, 1)));
+
+        assert!(!create_border(1, 2, 3, 3, 2, 3).contains(create_coord(0, 2, 3)));
+        assert!(create_border(1, 2, 3, 3, 2, 3).contains(create_coord(1, 2, 3)));
+        assert!(create_border(1, 2, 3, 3, 2, 3).contains(create_coord(2, 2, 3)));
+        assert!(create_border(1, 2, 3, 3, 2, 3).contains(create_coord(3, 2, 3)));
+        assert!(!create_border(1, 2, 3, 3, 2, 3).contains(create_coord(4, 2, 3)));
+
+        assert!(!create_border(1, 2, 3, 3, 2, 3).contains(create_coord(1, 2, 5)));
+        assert!(!create_border(1, 2, 3, 3, 2, 3).contains(create_coord(2, 1, 3)));
     }
 }
