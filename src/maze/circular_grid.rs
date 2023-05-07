@@ -221,7 +221,7 @@ impl Grid for CircularGrid {
 }
 
 #[cfg(test)]
-mod factory_tests {
+mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
         components::{Angle, CircleCoordinate},
