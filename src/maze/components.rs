@@ -24,7 +24,28 @@ impl Border {
     }
 
     pub fn contains(&self, coord: CircleCoordinate) -> bool {
-        todo!();
+        match self.border_type() {
+            BorderType::Arc => {
+                if coord.circle != self.start.circle {
+                    return false;
+                }
+
+                if self.start.angle == self.end.angle {
+                    return true;
+                }
+
+                if self.start.angle > self.end.angle {
+                    coord.angle <= self.end.angle || coord.angle >= self.start.angle
+                } else {
+                    coord.angle >= self.start.angle && coord.angle <= self.end.angle
+                }
+            }
+            BorderType::Line => {
+                self.start.angle == coord.angle
+                    && self.start.circle <= coord.circle
+                    && self.end.circle >= coord.circle
+            }
+        }
     }
 }
 
@@ -78,7 +99,6 @@ mod components_test {
     }
 
     #[test]
-    #[ignore]
     fn test_border_contains() {
         assert!(create_border(0, 0, 1, 0, 1, 10).contains(create_coord(0, 1, 20)));
         assert!(!create_border(0, 0, 1, 0, 1, 20).contains(create_coord(0, 1, 10)));
@@ -93,6 +113,15 @@ mod components_test {
         assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(4, 0, 1)));
         assert!(create_border(1, 0, 1, 5, 0, 1).contains(create_coord(5, 0, 1)));
         assert!(!create_border(1, 0, 1, 5, 0, 1).contains(create_coord(6, 0, 1)));
+
+        assert!(!create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 7, 10)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 8, 10)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 9, 10)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 0, 1)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 1, 10)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 2, 10)));
+        assert!(create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 3, 10)));
+        assert!(!create_border(1, 8, 10, 1, 3, 10).contains(create_coord(1, 4, 10)));
 
         assert!(!create_border(1, 2, 3, 3, 2, 3).contains(create_coord(0, 2, 3)));
         assert!(create_border(1, 2, 3, 3, 2, 3).contains(create_coord(1, 2, 3)));
