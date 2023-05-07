@@ -241,7 +241,7 @@ mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
         components::{Angle, Border, CircleCoordinate, Direction, Grid},
-        test_utils::test_utials::create_border,
+        test_utils::test_utils::create_border,
     };
 
     use super::build;

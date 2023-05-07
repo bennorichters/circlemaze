@@ -81,7 +81,7 @@ pub struct CircleCoordinate {
 mod components_test {
     use crate::maze::{
         components::BorderType,
-        test_utils::test_utials::{create_border, create_coord},
+        test_utils::test_utils::{create_border, create_coord},
     };
 
     #[test]
