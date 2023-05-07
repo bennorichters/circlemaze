@@ -2,7 +2,7 @@ use std::{cmp::min, collections::HashMap};
 
 use fraction::{ToPrimitive, Zero};
 
-use super::components::{random_nr, Angle, CircleCoordinate, Direction, Grid};
+use super::components::{random_nr, Angle, Border, CircleCoordinate, Direction, Grid};
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
     let builder = CircularGridBuilder {
@@ -118,6 +118,14 @@ impl CircularGrid {
             None
         }
     }
+
+    fn coords_not_on_borders(&self, borders: &Vec<Border>) -> Vec<CircleCoordinate> {
+        let cs = self.all_coords();
+        cs.iter()
+            .filter(|&c| !borders.iter().any(|b| b.contains(c)))
+            .cloned()
+            .collect()
+    }
 }
 
 impl Grid for CircularGrid {
@@ -232,7 +240,8 @@ impl Grid for CircularGrid {
 mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
-        components::{Angle, CircleCoordinate, Direction, Grid},
+        components::{Angle, Border, CircleCoordinate, Direction, Grid},
+        test_utils::test_utials::create_border,
     };
 
     use super::build;
@@ -361,5 +370,16 @@ mod circular_grid_test {
 
         on_grid_pass(3, 11, 21, 7, 0.3);
         on_grid_fail(3, 11, 21, 7, 0.34);
+    }
+
+    #[test]
+    fn test_coords_not_on_border() {
+        let grid = build(1, 4, 0.);
+
+        let borders: Vec<Border> = vec![create_border(2, 1, 1, 1, 1, 1)];
+        let r = grid.coords_not_on_borders(&borders);
+
+        println!("{:?}", r);
+        // assert!(false);
     }
 }
