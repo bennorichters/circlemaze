@@ -1,6 +1,6 @@
 use std::{cmp::min, collections::HashMap};
 
-use fraction::Zero;
+use fraction::{ToPrimitive, Zero};
 
 use super::{
     components::{Angle, CircleCoordinate},
@@ -78,11 +78,33 @@ impl CircularGridBuilder {
             },
         };
 
-        if c.is_on_grid(self.inner_slices, self.min_dist) {
+        if self.is_on_grid(&c) {
             c.angle
         } else {
             self.next_coord_on_circle(&c)
         }
+    }
+
+    pub fn is_on_grid(&self, coord: &CircleCoordinate) -> bool {
+        let denom = coord.angle.denom().unwrap();
+        if ((coord.circle + 1) * self.inner_slices) % denom == 0 {
+            return true;
+        }
+
+        if coord.circle == 0 {
+            return false;
+        }
+
+        if (coord.circle * self.inner_slices) % denom != 0 {
+            return false;
+        }
+
+        let section = (coord.angle * self.inner_slices).floor().to_u32().unwrap();
+        let angle_in_section = coord.angle - Angle::new(section, self.inner_slices);
+        let relative = angle_in_section * self.inner_slices;
+
+        let dist = relative.to_f64().unwrap();
+        self.min_dist <= dist && dist <= (1. - self.min_dist)
     }
 }
 
@@ -276,5 +298,61 @@ mod factory_tests {
 
         let coords = builder.coords_on_circle(4);
         assert_eq!(56, coords.len());
+    }
+
+    fn on_grid_pass(circle: u32, numer: u32, denom: u32, slices: u32, min_dist: f64) {
+        let builder = CircularGridBuilder {
+            inner_slices: slices,
+            min_dist,
+        };
+        let coord = CircleCoordinate {
+            circle,
+            angle: Angle::new(numer, denom),
+        };
+        assert!(builder.is_on_grid(&coord));
+    }
+
+    fn on_grid_fail(circle: u32, numer: u32, denom: u32, slices: u32, min_dist: f64) {
+        let builder = CircularGridBuilder {
+            inner_slices: slices,
+            min_dist,
+        };
+        let coord = CircleCoordinate {
+            circle,
+            angle: Angle::new(numer, denom),
+        };
+        assert!(!builder.is_on_grid(&coord));
+    }
+
+    #[test]
+    fn test_is_on_grid() {
+        on_grid_pass(0, 0, 1, 3, 1.);
+        on_grid_pass(0, 0, 1, 3, 0.);
+        on_grid_pass(0, 1, 3, 3, 1.);
+        on_grid_pass(0, 1, 3, 3, 0.);
+        on_grid_pass(0, 2, 3, 3, 1.);
+        on_grid_pass(0, 2, 3, 3, 0.);
+        on_grid_pass(1, 1, 6, 3, 1.);
+        on_grid_pass(1, 1, 6, 3, 0.);
+        on_grid_pass(1, 5, 6, 3, 0.);
+        on_grid_pass(1, 1, 3, 3, 0.);
+
+        on_grid_pass(1, 1, 3, 3, 0.33);
+        on_grid_pass(1, 2, 3, 3, 0.33);
+
+        on_grid_fail(0, 1, 4, 3, 1.);
+
+        on_grid_pass(4, 1, 28, 7, 0.);
+        on_grid_fail(4, 1, 28, 7, 0.3);
+        on_grid_pass(5, 1, 35, 7, 0.);
+        on_grid_fail(5, 1, 35, 7, 0.3);
+        on_grid_pass(5, 1, 35, 7, 0.);
+        on_grid_fail(5, 1, 35, 7, 0.3);
+        on_grid_fail(5, 4, 35, 7, 0.3);
+        on_grid_pass(5, 6, 35, 7, 0.);
+        on_grid_fail(5, 6, 35, 7, 0.3);
+
+        on_grid_pass(3, 11, 21, 7, 0.3);
+        on_grid_fail(3, 11, 21, 7, 0.34);
     }
 }
