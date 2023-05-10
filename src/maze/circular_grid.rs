@@ -224,7 +224,7 @@ impl Grid for CircularGrid {
         }
     }
 
-    fn take(&self, borders: &Vec<super::components::Border>) -> CircleCoordinate {
+    fn take(&self, borders: &[Border]) -> CircleCoordinate {
         let cs = self.all_coords();
         let f: Vec<CircleCoordinate> = cs
             .iter()

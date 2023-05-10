@@ -1,6 +1,6 @@
 use super::{
     circular_grid,
-    components::{Angle, Border, BorderType, CircleCoordinate, Grid, Direction, random_nr},
+    components::{random_nr, Angle, Border, BorderType, CircleCoordinate, Direction, Grid},
 };
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
@@ -36,7 +36,7 @@ impl MazeBuilder {
         let mut open_coords = self.grid.all_coords();
         while !open_coords.is_empty() {
             let coord = &open_coords[random_nr(open_coords.len())];
-            let path_coords = self.create_path(coord, &open_coords);
+            let path_coords = self.create_path(coord);
             open_coords.retain(|e| !path_coords.contains(e));
         }
     }
@@ -44,15 +44,16 @@ impl MazeBuilder {
     fn create_path(
         &mut self,
         start_coord: &CircleCoordinate,
-        open_coords: &[CircleCoordinate],
     ) -> Vec<CircleCoordinate> {
         let mut visited: Vec<CircleCoordinate> = vec![start_coord.to_owned()];
         let mut options: Vec<(CircleCoordinate, Direction)> = Vec::new();
         let mut coord = start_coord.to_owned();
-        while open_coords.contains(&coord) {
+        let mut path_open = true;
+        while path_open {
             add_options(&mut options, &coord);
             let (from_coord, to_coord, direction) = self.next(&mut options, &visited);
             coord = to_coord.to_owned();
+            path_open = !self.borders.iter().any(|b| b.contains(&coord));
 
             visited.push(to_coord.to_owned());
             let (merge_start, merge_end, border_type) = match direction {
@@ -73,8 +74,7 @@ impl MazeBuilder {
         current_path: &[CircleCoordinate],
     ) -> (CircleCoordinate, CircleCoordinate, Direction) {
         while !options.is_empty() {
-            let (candidate_start, candidate_direction) =
-                options.remove(random_nr(options.len()));
+            let (candidate_start, candidate_direction) = options.remove(random_nr(options.len()));
             let neighbour = self.grid.neighbour(&candidate_start, &candidate_direction);
             if let Some(end) = neighbour {
                 if !current_path.contains(&end) {

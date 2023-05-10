@@ -9,7 +9,7 @@ pub enum Direction {
 }
 
 pub trait Grid {
-    fn take(&self, borders: &Vec<Border>) -> CircleCoordinate;
+    fn take(&self, borders: &[Border]) -> CircleCoordinate;
     fn all_coords(&self) -> Vec<CircleCoordinate>;
     fn neighbour(
         &self,
