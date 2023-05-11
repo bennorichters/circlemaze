@@ -149,7 +149,7 @@ impl CircularGrid {
 
 impl Grid for CircularGrid {
     fn neighbour(
-        &self,
+        &mut self,
         coord: &CircleCoordinate,
         direction: &Direction,
     ) -> Option<CircleCoordinate> {
@@ -224,7 +224,7 @@ impl Grid for CircularGrid {
         }
     }
 
-    fn take(&self, borders: &[Border]) -> Option<CircleCoordinate> {
+    fn take(&mut self, borders: &[Border]) -> Option<CircleCoordinate> {
         let options = self.coords_not_on_borders(borders);
 
         if options.is_empty() {
@@ -267,7 +267,7 @@ mod circular_grid_test {
 
     #[test]
     fn test_neighbour_clockwise() {
-        let grid = build(10, 7, 0.);
+        let mut grid = build(10, 7, 0.);
 
         for pair in vec![
             pair(0, 1, 7, 0, 0, 1),
@@ -295,7 +295,7 @@ mod circular_grid_test {
 
     #[test]
     fn test_neighbour_out_in() {
-        let grid = build(10, 7, 0.);
+        let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
         assert_eq!(pair.0, grid.neighbour(&pair.1, &Direction::Out).unwrap());
         assert_eq!(pair.1, grid.neighbour(&pair.0, &Direction::In).unwrap());
@@ -443,7 +443,7 @@ mod circular_grid_test {
 
     #[test]
     fn test_take() {
-        let grid = build(1, 4, 0.);
+        let mut grid = build(1, 4, 0.);
         let borders: Vec<Border> = vec![
             create_border(1, 0, 1, 1, 0, 1),
             create_border(0, 0, 1, 0, 0, 1),

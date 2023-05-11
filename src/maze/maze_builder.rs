@@ -66,7 +66,7 @@ impl MazeBuilder {
     }
 
     fn next(
-        &self,
+        &mut self,
         options: &mut Vec<(CircleCoordinate, Direction)>,
         current_path: &[CircleCoordinate],
     ) -> (CircleCoordinate, CircleCoordinate, Direction) {
