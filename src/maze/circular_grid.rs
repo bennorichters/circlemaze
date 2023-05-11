@@ -119,21 +119,19 @@ impl CircularGrid {
         }
     }
 
-    fn coords_not_on_borders(&self, borders: &Vec<Border>) -> Vec<CircleCoordinate> {
+    fn coords_not_on_borders(&self, borders: &[Border]) -> Vec<CircleCoordinate> {
         let cs = self.all_coords();
         cs.iter()
             .filter(|&c| !borders.iter().any(|b| b.contains(c)))
             .cloned()
             .collect()
     }
-}
 
-impl Grid for CircularGrid {
     fn all_coords(&self) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
 
         let outer = *self.coords.keys().max().unwrap();
-        for circle in 0..outer {
+        for circle in 0..=outer {
             let angles_on_circle = self.coords.get(&circle).unwrap();
             let coords_on_circle: Vec<CircleCoordinate> = angles_on_circle
                 .iter()
@@ -147,7 +145,9 @@ impl Grid for CircularGrid {
 
         result
     }
+}
 
+impl Grid for CircularGrid {
     fn neighbour(
         &self,
         coord: &CircleCoordinate,
@@ -224,15 +224,14 @@ impl Grid for CircularGrid {
         }
     }
 
-    fn take(&self, borders: &[Border]) -> CircleCoordinate {
-        let cs = self.all_coords();
-        let f: Vec<CircleCoordinate> = cs
-            .iter()
-            .filter(|&c| !borders.iter().any(|b| b.contains(c)))
-            .cloned()
-            .collect();
+    fn take(&self, borders: &[Border]) -> Option<CircleCoordinate> {
+        let options = self.coords_not_on_borders(borders);
 
-        f[random_nr(f.len())].clone()
+        if options.is_empty() {
+            None
+        } else {
+            Some(options[random_nr(options.len())].clone())
+        }
     }
 }
 
@@ -241,7 +240,7 @@ mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
         components::{Angle, Border, CircleCoordinate, Direction, Grid},
-        test_utils::test_utils::create_border,
+        test_utils::helper_fns::{create_border, create_coord},
     };
 
     use super::build;
@@ -373,13 +372,83 @@ mod circular_grid_test {
     }
 
     #[test]
-    fn test_coords_not_on_border() {
+    fn test_coords_not_on_border_no_borders() {
         let grid = build(1, 4, 0.);
+        let borders: Vec<Border> = vec![];
+        let coords = grid.coords_not_on_borders(&borders);
 
-        let borders: Vec<Border> = vec![create_border(2, 1, 1, 1, 1, 1)];
-        let r = grid.coords_not_on_borders(&borders);
+        assert_eq!(12, coords.len());
 
-        println!("{:?}", r);
-        // assert!(false);
+        assert!(coords.contains(&create_coord(0, 0, 1)));
+        assert!(coords.contains(&create_coord(0, 1, 4)));
+        assert!(coords.contains(&create_coord(0, 1, 2)));
+        assert!(coords.contains(&create_coord(0, 3, 4)));
+
+        assert!(coords.contains(&create_coord(1, 0, 1)));
+        assert!(coords.contains(&create_coord(1, 1, 8)));
+        assert!(coords.contains(&create_coord(1, 1, 4)));
+        assert!(coords.contains(&create_coord(1, 3, 8)));
+        assert!(coords.contains(&create_coord(1, 1, 2)));
+        assert!(coords.contains(&create_coord(1, 5, 8)));
+        assert!(coords.contains(&create_coord(1, 3, 4)));
+        assert!(coords.contains(&create_coord(1, 7, 8)));
+    }
+
+    #[test]
+    fn test_coords_not_on_border_border_outer_circle() {
+        let grid = build(1, 4, 0.);
+        let borders: Vec<Border> = vec![create_border(1, 0, 1, 1, 0, 1)];
+        let coords = grid.coords_not_on_borders(&borders);
+
+        assert_eq!(4, coords.len());
+
+        assert!(coords.contains(&create_coord(0, 0, 1)));
+        assert!(coords.contains(&create_coord(0, 1, 4)));
+        assert!(coords.contains(&create_coord(0, 1, 2)));
+        assert!(coords.contains(&create_coord(0, 3, 4)));
+    }
+
+    #[test]
+    fn test_coords_not_on_border_line_border() {
+        let grid = build(1, 4, 0.);
+        let borders: Vec<Border> = vec![create_border(0, 0, 1, 1, 0, 1)];
+        let coords = grid.coords_not_on_borders(&borders);
+
+        assert_eq!(10, coords.len());
+
+        assert!(coords.contains(&create_coord(0, 1, 4)));
+        assert!(coords.contains(&create_coord(0, 1, 2)));
+        assert!(coords.contains(&create_coord(0, 3, 4)));
+
+        assert!(coords.contains(&create_coord(1, 1, 8)));
+        assert!(coords.contains(&create_coord(1, 1, 4)));
+        assert!(coords.contains(&create_coord(1, 3, 8)));
+        assert!(coords.contains(&create_coord(1, 1, 2)));
+        assert!(coords.contains(&create_coord(1, 5, 8)));
+        assert!(coords.contains(&create_coord(1, 3, 4)));
+        assert!(coords.contains(&create_coord(1, 7, 8)));
+    }
+
+    #[test]
+    fn test_coords_not_on_border_all_occupied() {
+        let grid = build(1, 4, 0.);
+        let borders: Vec<Border> = vec![
+            create_border(1, 0, 1, 1, 0, 1),
+            create_border(0, 0, 1, 0, 0, 1),
+        ];
+        let coords = grid.coords_not_on_borders(&borders);
+
+        assert!(coords.is_empty());
+    }
+
+    #[test]
+    fn test_take() {
+        let grid = build(1, 4, 0.);
+        let borders: Vec<Border> = vec![
+            create_border(1, 0, 1, 1, 0, 1),
+            create_border(0, 0, 1, 0, 0, 1),
+        ];
+
+        assert_eq!(None, grid.take(&borders));
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(test)]
-pub mod test_utils {
+pub mod helper_fns {
     use crate::maze::components::{Angle, Border, CircleCoordinate};
 
     pub fn create_coord(circle: u32, numer: u32, denom: u32) -> CircleCoordinate {

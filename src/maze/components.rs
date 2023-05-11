@@ -9,8 +9,7 @@ pub enum Direction {
 }
 
 pub trait Grid {
-    fn take(&self, borders: &[Border]) -> CircleCoordinate;
-    fn all_coords(&self) -> Vec<CircleCoordinate>;
+    fn take(&self, borders: &[Border]) -> Option<CircleCoordinate>;
     fn neighbour(
         &self,
         coord: &CircleCoordinate,
@@ -81,7 +80,7 @@ pub struct CircleCoordinate {
 mod components_test {
     use crate::maze::{
         components::BorderType,
-        test_utils::test_utils::{create_border, create_coord},
+        test_utils::helper_fns::{create_border, create_coord},
     };
 
     #[test]

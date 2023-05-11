@@ -33,11 +33,8 @@ struct MazeBuilder {
 
 impl MazeBuilder {
     fn create_borders(&mut self) {
-        let mut open_coords = self.grid.all_coords();
-        while !open_coords.is_empty() {
-            let coord = &open_coords[random_nr(open_coords.len())];
-            let path_coords = self.create_path(coord);
-            open_coords.retain(|e| !path_coords.contains(e));
+        while let Some(coord) = self.grid.take(&self.borders) {
+            self.create_path(&coord);
         }
     }
 
