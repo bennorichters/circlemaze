@@ -286,7 +286,7 @@ mod circular_grid_test {
     }
 
     #[test]
-    fn test_neighbour_clockwise() {
+    fn test_neighbours_on_arc() {
         let mut grid = build(10, 7, 0.);
 
         for pair in vec![
@@ -314,7 +314,7 @@ mod circular_grid_test {
     }
 
     #[test]
-    fn test_neighbour_out_in() {
+    fn test_neighbours_on_line() {
         let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
         assert_eq!(pair.0, grid.neighbour(&pair.1, &Direction::Out).unwrap());
