@@ -110,15 +110,6 @@ pub struct CircularGrid {
 }
 
 impl CircularGrid {
-    fn find(&self, circle: u32, angle: &Angle) -> Option<usize> {
-        let angles_option = self.coords.get(&(circle));
-        if let Some(angles) = angles_option {
-            angles.binary_search(angle).ok()
-        } else {
-            None
-        }
-    }
-
     fn coords_not_on_borders(&self, borders: &[Border]) -> Vec<CircleCoordinate> {
         let cs = self.all_coords();
         cs.iter()
@@ -154,73 +145,10 @@ impl Grid for CircularGrid {
         direction: &Direction,
     ) -> Option<CircleCoordinate> {
         match direction {
-            Direction::Out => {
-                let index_option = self.find(coord.circle + 1, &coord.angle);
-                if index_option.is_some() {
-                    Some(CircleCoordinate {
-                        circle: coord.circle + 1,
-                        angle: coord.angle.to_owned(),
-                    })
-                } else {
-                    None
-                }
-            }
-            Direction::In => {
-                if coord.circle == 0 {
-                    return None;
-                }
-                let index_option = self.find(coord.circle - 1, &coord.angle);
-                if index_option.is_some() {
-                    Some(CircleCoordinate {
-                        circle: coord.circle - 1,
-                        angle: coord.angle.to_owned(),
-                    })
-                } else {
-                    None
-                }
-            }
-            Direction::Clockwise => {
-                let index_option = self.find(coord.circle, &coord.angle);
-                if let Some(index) = index_option {
-                    let angles = self.coords.get(&coord.circle).unwrap();
-                    if angles.len() == 1 {
-                        None
-                    } else {
-                        let n = if index == angles.len() - 1 {
-                            0
-                        } else {
-                            index + 1
-                        };
-                        Some(CircleCoordinate {
-                            circle: coord.circle,
-                            angle: angles[n].to_owned(),
-                        })
-                    }
-                } else {
-                    None
-                }
-            }
-            Direction::CounterClockwise => {
-                let index_option = self.find(coord.circle, &coord.angle);
-                if let Some(index) = index_option {
-                    let angles = self.coords.get(&coord.circle).unwrap();
-                    if angles.len() == 1 {
-                        None
-                    } else {
-                        let n = if index == 0 {
-                            angles.len() - 1
-                        } else {
-                            index - 1
-                        };
-                        Some(CircleCoordinate {
-                            circle: coord.circle,
-                            angle: angles[n].to_owned(),
-                        })
-                    }
-                } else {
-                    None
-                }
-            }
+            Direction::Out => neighbour_out(&self.coords, coord),
+            Direction::In => neigbour_in(&self.coords, coord),
+            Direction::Clockwise => neighbour_clockwise(&self.coords, coord),
+            Direction::CounterClockwise => neighbour_counter_clockwise(&self.coords, coord),
         }
     }
 
@@ -232,6 +160,98 @@ impl Grid for CircularGrid {
         } else {
             Some(options[random_nr(options.len())].clone())
         }
+    }
+}
+
+fn find(angles: &HashMap<u32, Vec<Angle>>, circle: u32, angle: &Angle) -> Option<usize> {
+    let angles_option = angles.get(&(circle));
+    if let Some(angles) = angles_option {
+        angles.binary_search(angle).ok()
+    } else {
+        None
+    }
+}
+
+fn neighbour_out(
+    angles: &HashMap<u32, Vec<Angle>>,
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
+    let index_option = find(angles, coord.circle + 1, &coord.angle);
+    if index_option.is_some() {
+        Some(CircleCoordinate {
+            circle: coord.circle + 1,
+            angle: coord.angle.to_owned(),
+        })
+    } else {
+        None
+    }
+}
+
+fn neigbour_in(
+    angles: &HashMap<u32, Vec<Angle>>,
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
+    if coord.circle == 0 {
+        return None;
+    }
+    let index_option = find(angles, coord.circle - 1, &coord.angle);
+    if index_option.is_some() {
+        Some(CircleCoordinate {
+            circle: coord.circle - 1,
+            angle: coord.angle.to_owned(),
+        })
+    } else {
+        None
+    }
+}
+
+fn neighbour_clockwise(
+    angles: &HashMap<u32, Vec<Angle>>,
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
+    let index_option = find(angles, coord.circle, &coord.angle);
+    if let Some(index) = index_option {
+        let angles = angles.get(&coord.circle).unwrap();
+        if angles.len() == 1 {
+            None
+        } else {
+            let n = if index == angles.len() - 1 {
+                0
+            } else {
+                index + 1
+            };
+            Some(CircleCoordinate {
+                circle: coord.circle,
+                angle: angles[n].to_owned(),
+            })
+        }
+    } else {
+        None
+    }
+}
+
+fn neighbour_counter_clockwise(
+    angles: &HashMap<u32, Vec<Angle>>,
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
+    let index_option = find(angles, coord.circle, &coord.angle);
+    if let Some(index) = index_option {
+        let angles = angles.get(&coord.circle).unwrap();
+        if angles.len() == 1 {
+            None
+        } else {
+            let n = if index == 0 {
+                angles.len() - 1
+            } else {
+                index - 1
+            };
+            Some(CircleCoordinate {
+                circle: coord.circle,
+                angle: angles[n].to_owned(),
+            })
+        }
+    } else {
+        None
     }
 }
 
