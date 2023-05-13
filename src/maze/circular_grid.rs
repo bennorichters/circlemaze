@@ -139,7 +139,17 @@ impl CircularGrid {
 }
 
 impl Grid for CircularGrid {
-    fn neighbour(
+    fn take_free(&mut self, borders: &[Border]) -> Option<CircleCoordinate> {
+        let options = self.coords_not_on_borders(borders);
+
+        if options.is_empty() {
+            None
+        } else {
+            Some(options[random_nr(options.len())].clone())
+        }
+    }
+
+    fn take_neighbour(
         &mut self,
         coord: &CircleCoordinate,
         direction: &Direction,
@@ -149,16 +159,6 @@ impl Grid for CircularGrid {
             Direction::In => neigbour_in(&self.coords, coord),
             Direction::Clockwise => neighbour_clockwise(&self.coords, coord),
             Direction::CounterClockwise => neighbour_counter_clockwise(&self.coords, coord),
-        }
-    }
-
-    fn take(&mut self, borders: &[Border]) -> Option<CircleCoordinate> {
-        let options = self.coords_not_on_borders(borders);
-
-        if options.is_empty() {
-            None
-        } else {
-            Some(options[random_nr(options.len())].clone())
         }
     }
 }
@@ -293,11 +293,11 @@ mod circular_grid_test {
             println!("{:?}", pair);
             assert_eq!(
                 pair.0,
-                grid.neighbour(&pair.1, &Direction::Clockwise).unwrap()
+                grid.take_neighbour(&pair.1, &Direction::Clockwise).unwrap()
             );
             assert_eq!(
                 pair.1,
-                grid.neighbour(&pair.0, &Direction::CounterClockwise)
+                grid.take_neighbour(&pair.0, &Direction::CounterClockwise)
                     .unwrap()
             );
         }
@@ -307,8 +307,8 @@ mod circular_grid_test {
     fn test_neighbours_on_line() {
         let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
-        assert_eq!(pair.0, grid.neighbour(&pair.1, &Direction::Out).unwrap());
-        assert_eq!(pair.1, grid.neighbour(&pair.0, &Direction::In).unwrap());
+        assert_eq!(pair.0, grid.take_neighbour(&pair.1, &Direction::Out).unwrap());
+        assert_eq!(pair.1, grid.take_neighbour(&pair.0, &Direction::In).unwrap());
     }
 
     #[test]
@@ -459,6 +459,6 @@ mod circular_grid_test {
             create_border(0, 0, 1, 0, 0, 1),
         ];
 
-        assert_eq!(None, grid.take(&borders));
+        assert_eq!(None, grid.take_free(&borders));
     }
 }

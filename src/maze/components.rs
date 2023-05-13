@@ -9,8 +9,8 @@ pub enum Direction {
 }
 
 pub trait Grid {
-    fn take(&mut self, borders: &[Border]) -> Option<CircleCoordinate>;
-    fn neighbour(
+    fn take_free(&mut self, borders: &[Border]) -> Option<CircleCoordinate>;
+    fn take_neighbour(
         &mut self,
         coord: &CircleCoordinate,
         direction: &Direction,

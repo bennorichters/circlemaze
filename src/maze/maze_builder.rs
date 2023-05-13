@@ -33,7 +33,7 @@ struct MazeBuilder {
 
 impl MazeBuilder {
     fn create_borders(&mut self) {
-        while let Some(coord) = self.grid.take(&self.borders) {
+        while let Some(coord) = self.grid.take_free(&self.borders) {
             self.create_path(&coord);
         }
     }
@@ -72,7 +72,7 @@ impl MazeBuilder {
     ) -> (CircleCoordinate, CircleCoordinate, Direction) {
         while !options.is_empty() {
             let (candidate_start, candidate_direction) = options.remove(random_nr(options.len()));
-            let neighbour = self.grid.neighbour(&candidate_start, &candidate_direction);
+            let neighbour = self.grid.take_neighbour(&candidate_start, &candidate_direction);
             if let Some(end) = neighbour {
                 if !current_path.contains(&end) {
                     return (candidate_start, end, candidate_direction);
