@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap};
+use std::cmp::min;
 
 use fraction::{ToPrimitive, Zero};
 
@@ -10,9 +10,9 @@ pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGri
         min_dist,
     };
 
-    let mut coords: HashMap<u32, Vec<Angle>> = HashMap::new();
+    let mut coords: Vec<Vec<Angle>> = Vec::new();
     for circle in 0..=outer_circle {
-        coords.insert(circle, builder.coords_on_circle(circle));
+        coords.push(builder.coords_on_circle(circle));
     }
 
     CircularGrid { coords }
@@ -106,7 +106,7 @@ impl CircularGridBuilder {
 }
 
 pub struct CircularGrid {
-    coords: HashMap<u32, Vec<Angle>>,
+    coords: Vec<Vec<Angle>>,
 }
 
 impl CircularGrid {
@@ -121,13 +121,13 @@ impl CircularGrid {
     fn all_coords(&self) -> Vec<CircleCoordinate> {
         let mut result: Vec<CircleCoordinate> = Vec::new();
 
-        let outer = *self.coords.keys().max().unwrap();
+        let outer = self.coords.len() - 1;
         for circle in 0..=outer {
-            let angles_on_circle = self.coords.get(&circle).unwrap();
+            let angles_on_circle = self.coords[circle].clone();
             let coords_on_circle: Vec<CircleCoordinate> = angles_on_circle
                 .iter()
                 .map(|angle| CircleCoordinate {
-                    circle,
+                    circle: circle as u32,
                     angle: *angle,
                 })
                 .collect();
@@ -163,20 +163,13 @@ impl Grid for CircularGrid {
     }
 }
 
-fn find(angles: &HashMap<u32, Vec<Angle>>, circle: u32, angle: &Angle) -> Option<usize> {
-    let angles_option = angles.get(&(circle));
-    if let Some(angles) = angles_option {
-        angles.binary_search(angle).ok()
-    } else {
-        None
-    }
+fn find(angles: &[Vec<Angle>], circle: usize, angle: &Angle) -> Option<usize> {
+    let angles = &angles[circle];
+    angles.binary_search(angle).ok()
 }
 
-fn neighbour_out(
-    angles: &HashMap<u32, Vec<Angle>>,
-    coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle + 1, &coord.angle);
+fn neighbour_out(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<CircleCoordinate> {
+    let index_option = find(angles, coord.circle as usize + 1, &coord.angle);
     if index_option.is_some() {
         Some(CircleCoordinate {
             circle: coord.circle + 1,
@@ -187,14 +180,11 @@ fn neighbour_out(
     }
 }
 
-fn neigbour_in(
-    angles: &HashMap<u32, Vec<Angle>>,
-    coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
+fn neigbour_in(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<CircleCoordinate> {
     if coord.circle == 0 {
         return None;
     }
-    let index_option = find(angles, coord.circle - 1, &coord.angle);
+    let index_option = find(angles, coord.circle as usize - 1, &coord.angle);
     if index_option.is_some() {
         Some(CircleCoordinate {
             circle: coord.circle - 1,
@@ -206,12 +196,12 @@ fn neigbour_in(
 }
 
 fn neighbour_clockwise(
-    angles: &HashMap<u32, Vec<Angle>>,
+    angles: &[Vec<Angle>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle, &coord.angle);
+    let index_option = find(angles, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
-        let angles = angles.get(&coord.circle).unwrap();
+        let angles = &angles[coord.circle as usize];
         if angles.len() == 1 {
             None
         } else {
@@ -231,12 +221,12 @@ fn neighbour_clockwise(
 }
 
 fn neighbour_counter_clockwise(
-    angles: &HashMap<u32, Vec<Angle>>,
+    angles: &[Vec<Angle>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle, &coord.angle);
+    let index_option = find(angles, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
-        let angles = angles.get(&coord.circle).unwrap();
+        let angles = &angles[coord.circle as usize];
         if angles.len() == 1 {
             None
         } else {
