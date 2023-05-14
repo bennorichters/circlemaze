@@ -156,10 +156,10 @@ impl Grid for CircularGrid {
     }
 }
 
-fn find(angles: &[Vec<CircleCoordinate>], circle: usize, angle: &Angle) -> Option<usize> {
-    if circle < angles.len() {
-        let angles = &angles[circle];
-        angles
+fn find(coords: &[Vec<CircleCoordinate>], circle: usize, angle: &Angle) -> Option<usize> {
+    if circle < coords.len() {
+        let coords_on_circle = &coords[circle];
+        coords_on_circle
             .binary_search(&CircleCoordinate {
                 circle: circle as u32,
                 angle: *angle,
@@ -171,10 +171,10 @@ fn find(angles: &[Vec<CircleCoordinate>], circle: usize, angle: &Angle) -> Optio
 }
 
 fn neighbour_out(
-    angles: &[Vec<CircleCoordinate>],
+    coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle as usize + 1, &coord.angle);
+    let index_option = find(coords, coord.circle as usize + 1, &coord.angle);
     if index_option.is_some() {
         Some(CircleCoordinate {
             circle: coord.circle + 1,
@@ -186,13 +186,13 @@ fn neighbour_out(
 }
 
 fn neigbour_in(
-    angles: &[Vec<CircleCoordinate>],
+    coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
     if coord.circle == 0 {
         return None;
     }
-    let index_option = find(angles, coord.circle as usize - 1, &coord.angle);
+    let index_option = find(coords, coord.circle as usize - 1, &coord.angle);
     if index_option.is_some() {
         Some(CircleCoordinate {
             circle: coord.circle - 1,
@@ -204,21 +204,21 @@ fn neigbour_in(
 }
 
 fn neighbour_clockwise(
-    angles: &[Vec<CircleCoordinate>],
+    coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle as usize, &coord.angle);
+    let index_option = find(coords, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
-        let angles = &angles[coord.circle as usize];
-        if angles.len() == 1 {
+        let coords_on_circle = &coords[coord.circle as usize];
+        if coords_on_circle.len() == 1 {
             None
         } else {
-            let n = if index == angles.len() - 1 {
+            let n = if index == coords_on_circle.len() - 1 {
                 0
             } else {
                 index + 1
             };
-            Some(angles[n].to_owned())
+            Some(coords_on_circle[n].to_owned())
         }
     } else {
         None
@@ -226,21 +226,21 @@ fn neighbour_clockwise(
 }
 
 fn neighbour_counter_clockwise(
-    angles: &[Vec<CircleCoordinate>],
+    coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
-    let index_option = find(angles, coord.circle as usize, &coord.angle);
+    let index_option = find(coords, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
-        let angles = &angles[coord.circle as usize];
-        if angles.len() == 1 {
+        let coords_on_circle = &coords[coord.circle as usize];
+        if coords_on_circle.len() == 1 {
             None
         } else {
             let n = if index == 0 {
-                angles.len() - 1
+                coords_on_circle.len() - 1
             } else {
                 index - 1
             };
-            Some(angles[n].to_owned())
+            Some(coords_on_circle[n].to_owned())
         }
     } else {
         None
