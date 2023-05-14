@@ -132,6 +132,14 @@ impl CircularGrid {
 }
 
 impl Grid for CircularGrid {
+    fn take_from_outer_circle(&mut self) -> CircleCoordinate {
+        todo!()
+    }
+
+    fn consume_outer_circle(&mut self) {
+        todo!()
+    }
+
     fn take_free(&mut self, borders: &[Border]) -> Option<CircleCoordinate> {
         let options = self.coords_not_on_borders(borders);
 
