@@ -10,7 +10,7 @@ pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGri
         min_dist,
     };
 
-    let mut coords: Vec<Vec<Angle>> = Vec::new();
+    let mut coords: Vec<Vec<CircleCoordinate>> = Vec::new();
     for circle in 0..=outer_circle {
         coords.push(builder.coords_on_circle(circle));
     }
@@ -24,34 +24,34 @@ struct CircularGridBuilder {
 }
 
 impl CircularGridBuilder {
-    fn coords_on_circle(&self, circle: u32) -> Vec<Angle> {
-        let mut result: Vec<Angle> = Vec::new();
+    fn coords_on_circle(&self, circle: u32) -> Vec<CircleCoordinate> {
+        let mut result: Vec<CircleCoordinate> = Vec::new();
         let mut coord = CircleCoordinate {
             circle,
             angle: Angle::from(0),
         };
 
         loop {
-            result.push(coord.angle.to_owned());
+            result.push(coord.to_owned());
             let angle = self.next_coord_on_circle(&coord);
-            if angle.is_zero() {
+            if angle.angle.is_zero() {
                 break;
             }
-            coord = CircleCoordinate {
-                circle: coord.circle,
-                angle,
-            };
+            coord = angle;
         }
 
         result
     }
 
-    fn next_coord_on_circle(&self, coord: &CircleCoordinate) -> Angle {
+    fn next_coord_on_circle(&self, coord: &CircleCoordinate) -> CircleCoordinate {
         if coord.circle == 0 {
-            return if coord.angle == Angle::new(self.inner_slices - 1, self.inner_slices) {
-                Angle::from(0)
-            } else {
-                coord.angle + Angle::new(1_u32, self.inner_slices)
+            return CircleCoordinate {
+                circle: 0,
+                angle: if coord.angle == Angle::new(self.inner_slices - 1, self.inner_slices) {
+                    Angle::from(0)
+                } else {
+                    coord.angle + Angle::new(1_u32, self.inner_slices)
+                },
             };
         }
 
@@ -76,7 +76,7 @@ impl CircularGridBuilder {
         };
 
         if self.is_on_grid(&c) {
-            c.angle
+            c
         } else {
             self.next_coord_on_circle(&c)
         }
@@ -106,7 +106,7 @@ impl CircularGridBuilder {
 }
 
 pub struct CircularGrid {
-    coords: Vec<Vec<Angle>>,
+    coords: Vec<Vec<CircleCoordinate>>,
 }
 
 impl CircularGrid {
@@ -123,14 +123,7 @@ impl CircularGrid {
 
         let outer = self.coords.len() - 1;
         for circle in 0..=outer {
-            let angles_on_circle = self.coords[circle].clone();
-            let coords_on_circle: Vec<CircleCoordinate> = angles_on_circle
-                .iter()
-                .map(|angle| CircleCoordinate {
-                    circle: circle as u32,
-                    angle: *angle,
-                })
-                .collect();
+            let coords_on_circle = self.coords[circle].clone();
             result.extend(coords_on_circle);
         }
 
@@ -163,12 +156,24 @@ impl Grid for CircularGrid {
     }
 }
 
-fn find(angles: &[Vec<Angle>], circle: usize, angle: &Angle) -> Option<usize> {
-    let angles = &angles[circle];
-    angles.binary_search(angle).ok()
+fn find(angles: &[Vec<CircleCoordinate>], circle: usize, angle: &Angle) -> Option<usize> {
+    if circle < angles.len() {
+        let angles = &angles[circle];
+        angles
+            .binary_search(&CircleCoordinate {
+                circle: circle as u32,
+                angle: *angle,
+            })
+            .ok()
+    } else {
+        None
+    }
 }
 
-fn neighbour_out(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<CircleCoordinate> {
+fn neighbour_out(
+    angles: &[Vec<CircleCoordinate>],
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
     let index_option = find(angles, coord.circle as usize + 1, &coord.angle);
     if index_option.is_some() {
         Some(CircleCoordinate {
@@ -180,7 +185,10 @@ fn neighbour_out(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<Circ
     }
 }
 
-fn neigbour_in(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<CircleCoordinate> {
+fn neigbour_in(
+    angles: &[Vec<CircleCoordinate>],
+    coord: &CircleCoordinate,
+) -> Option<CircleCoordinate> {
     if coord.circle == 0 {
         return None;
     }
@@ -196,7 +204,7 @@ fn neigbour_in(angles: &[Vec<Angle>], coord: &CircleCoordinate) -> Option<Circle
 }
 
 fn neighbour_clockwise(
-    angles: &[Vec<Angle>],
+    angles: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
     let index_option = find(angles, coord.circle as usize, &coord.angle);
@@ -210,10 +218,7 @@ fn neighbour_clockwise(
             } else {
                 index + 1
             };
-            Some(CircleCoordinate {
-                circle: coord.circle,
-                angle: angles[n].to_owned(),
-            })
+            Some(angles[n].to_owned())
         }
     } else {
         None
@@ -221,7 +226,7 @@ fn neighbour_clockwise(
 }
 
 fn neighbour_counter_clockwise(
-    angles: &[Vec<Angle>],
+    angles: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
 ) -> Option<CircleCoordinate> {
     let index_option = find(angles, coord.circle as usize, &coord.angle);
@@ -235,10 +240,7 @@ fn neighbour_counter_clockwise(
             } else {
                 index - 1
             };
-            Some(CircleCoordinate {
-                circle: coord.circle,
-                angle: angles[n].to_owned(),
-            })
+            Some(angles[n].to_owned())
         }
     } else {
         None
@@ -307,8 +309,14 @@ mod circular_grid_test {
     fn test_neighbours_on_line() {
         let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
-        assert_eq!(pair.0, grid.take_neighbour(&pair.1, &Direction::Out).unwrap());
-        assert_eq!(pair.1, grid.take_neighbour(&pair.0, &Direction::In).unwrap());
+        assert_eq!(
+            pair.0,
+            grid.take_neighbour(&pair.1, &Direction::Out).unwrap()
+        );
+        assert_eq!(
+            pair.1,
+            grid.take_neighbour(&pair.0, &Direction::In).unwrap()
+        );
     }
 
     #[test]

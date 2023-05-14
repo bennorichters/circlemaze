@@ -70,7 +70,7 @@ pub fn random_nr(upper_bound: usize) -> usize {
     (rand::random::<f32>() * upper_bound as f32).floor() as usize
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CircleCoordinate {
     pub circle: u32,
     pub angle: Angle,
@@ -132,5 +132,14 @@ mod components_test {
 
         assert!(!create_border(1, 2, 3, 3, 2, 3).contains(&create_coord(1, 2, 5)));
         assert!(!create_border(1, 2, 3, 3, 2, 3).contains(&create_coord(2, 1, 3)));
+    }
+
+    #[test]
+    fn test_ordering_circular_coordinate() {
+        assert!(create_coord(0, 0, 1) < create_coord(0, 1, 2));
+        assert!(create_coord(0, 1, 2) < create_coord(1, 0, 1));
+        assert!(create_coord(0, 1, 2) < create_coord(0, 3, 4));
+        assert!(create_coord(0, 3, 20) < create_coord(0, 1, 4));
+        assert!(create_coord(2, 1, 4) < create_coord(3, 3, 20));
     }
 }
