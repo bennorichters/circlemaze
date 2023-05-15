@@ -179,20 +179,23 @@ impl Grid for CircularGrid {
         coord: &CircleCoordinate,
         direction: &Direction,
     ) -> Option<(CircleCoordinate, CellState)> {
-        todo!()
-        // let neigbour_option = match direction {
-        //     Direction::Out => neighbour_out(&self.coords, coord),
-        //     Direction::In => neigbour_in(&self.coords, coord),
-        //     Direction::Clockwise => neighbour_clockwise(&self.coords, coord),
-        //     Direction::CounterClockwise => neighbour_counter_clockwise(&self.coords, coord),
-        // };
+        let (circle_index_diff, neigbour_index_option): (isize, Option<usize>) = match direction {
+            Direction::Out => (1, neighbour_out(&self.coords, coord)),
+            Direction::In => (-1, neigbour_in(&self.coords, coord)),
+            Direction::Clockwise => (0, neighbour_clockwise(&self.coords, coord)),
+            Direction::CounterClockwise => (0, neighbour_counter_clockwise(&self.coords, coord)),
+        };
 
-        // if let Some(coord) = neigbour_option {
-        //     let state = self.take(&coord);
-        //     Some((coord, state))
-        // } else {
-        //     None
-        // }
+        if let Some(index_on_circle) = neigbour_index_option {
+            let circle_index = (coord.circle as usize)
+                .checked_add_signed(circle_index_diff)
+                .unwrap();
+            let coord = self.coords[circle_index][index_on_circle].to_owned();
+            let state = self.take(&coord);
+            Some((coord, state))
+        } else {
+            None
+        }
     }
 }
 
@@ -419,7 +422,6 @@ mod circular_grid_test {
     }
 
     #[test]
-    #[ignore]
     fn test_neighbours_on_arc() {
         let mut grid = build(10, 7, 0.);
 
@@ -450,7 +452,6 @@ mod circular_grid_test {
     }
 
     #[test]
-    #[ignore]
     fn test_neighbours_on_line() {
         let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
@@ -465,7 +466,6 @@ mod circular_grid_test {
     }
 
     #[test]
-    #[ignore]
     fn test_coords_on_circle() {
         let builder = CircularGridBuilder { inner_slices: 7 };
 
