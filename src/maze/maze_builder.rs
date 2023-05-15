@@ -1,6 +1,6 @@
 use super::{
     circular_grid,
-    components::{random_nr, Border, BorderType, CircleCoordinate, Direction, Grid},
+    components::{random_nr, Border, BorderType, CircleCoordinate, Direction, Grid, CellState},
 };
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
@@ -40,9 +40,9 @@ impl MazeBuilder {
         let mut path_open = true;
         while path_open {
             add_options(&mut options, &coord);
-            let (from_coord, to_coord, direction) = self.next(&mut options, &visited);
+            let (from_coord, to_coord, direction, state) = self.next(&mut options, &visited);
             coord = to_coord.to_owned();
-            path_open = !self.borders.iter().any(|b| b.contains(&coord));
+            path_open = state == CellState::Free;
 
             visited.push(to_coord.to_owned());
             let (merge_start, merge_end, border_type) = match direction {
@@ -61,15 +61,15 @@ impl MazeBuilder {
         &mut self,
         options: &mut Vec<(CircleCoordinate, Direction)>,
         current_path: &[CircleCoordinate],
-    ) -> (CircleCoordinate, CircleCoordinate, Direction) {
+    ) -> (CircleCoordinate, CircleCoordinate, Direction, CellState) {
         while !options.is_empty() {
             let (candidate_start, candidate_direction) = options.remove(random_nr(options.len()));
             let neighbour_option = self
                 .grid
                 .take_neighbour(&candidate_start, &candidate_direction);
-            if let Some((end, _status)) = neighbour_option {
+            if let Some((end, status)) = neighbour_option {
                 if !current_path.contains(&end) {
-                    return (candidate_start, end, candidate_direction);
+                    return (candidate_start, end, candidate_direction, status);
                 }
             }
         }
