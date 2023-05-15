@@ -128,13 +128,9 @@ impl CircularGrid {
         let dist = (a1 - a2).abs() * ((circle + 1) * self.inner_slices);
         dist.to_f64().unwrap() < self.min_dist
     }
-}
 
-impl Grid for CircularGrid {
-    fn take_from_outer_circle(&mut self) -> (CircleCoordinate, CellState) {
-        let options: Vec<&CircleCoordinate> = self.coords[self.coords.len() - 1].iter().collect();
-        let coord = (self.selector)(options);
-        let state = if self.taken.contains(&coord) {
+    fn take(&mut self, coord: &CircleCoordinate) -> CellState {
+        let state = if self.taken.contains(coord) {
             CellState::Taken
         } else {
             CellState::Free
@@ -142,17 +138,40 @@ impl Grid for CircularGrid {
         if state == CellState::Free {
             self.taken.push(coord.to_owned());
         }
-        self.remove_close_neighbours(&coord);
+        self.remove_close_neighbours(coord);
+
+        state
+    }
+}
+
+impl Grid for CircularGrid {
+    fn take_from_outer_circle(&mut self) -> (CircleCoordinate, CellState) {
+        let options: Vec<&CircleCoordinate> = self.coords[self.coords.len() - 1].iter().collect();
+        let coord = (self.selector)(options);
+        let state = self.take(&coord);
         (coord, state)
     }
 
     fn consume_outer_circle(&mut self) {
-        // self.coords[self.outer_circle].iter().c
-        todo!()
+        let outer_coords: Vec<CircleCoordinate> = self.coords[self.coords.len() - 1].clone();
+        self.taken.extend(outer_coords);
     }
 
     fn take_free(&mut self) -> Option<CircleCoordinate> {
-        todo!()
+        let options: Vec<&CircleCoordinate> = self
+            .coords
+            .iter()
+            .flatten()
+            .filter(|c| !self.taken.contains(c))
+            .collect();
+
+        if options.is_empty() {
+            None
+        } else {
+            let coord = (self.selector)(options);
+            self.take(&coord);
+            Some(coord)
+        }
     }
 
     fn take_neighbour(
@@ -161,6 +180,19 @@ impl Grid for CircularGrid {
         direction: &Direction,
     ) -> Option<(CircleCoordinate, CellState)> {
         todo!()
+        // let neigbour_option = match direction {
+        //     Direction::Out => neighbour_out(&self.coords, coord),
+        //     Direction::In => neigbour_in(&self.coords, coord),
+        //     Direction::Clockwise => neighbour_clockwise(&self.coords, coord),
+        //     Direction::CounterClockwise => neighbour_counter_clockwise(&self.coords, coord),
+        // };
+
+        // if let Some(coord) = neigbour_option {
+        //     let state = self.take(&coord);
+        //     Some((coord, state))
+        // } else {
+        //     None
+        // }
     }
 }
 
@@ -445,9 +477,14 @@ mod circular_grid_test {
     }
 
     #[test]
-    #[ignore]
     fn test_take() {
-        let mut grid = build(1, 4, 0.);
-        assert_eq!(None, grid.take_free());
+        let select_first = |c: Vec<&CircleCoordinate>| c[0].to_owned();
+        let mut grid = build_with_selector(1, 4, 0., Box::new(select_first));
+
+        for _ in 0..12 {
+            assert!(grid.take_free().is_some());
+        }
+
+        assert!(grid.take_free().is_none());
     }
 }
