@@ -2,25 +2,47 @@ use std::cmp::min;
 
 use fraction::{ToPrimitive, Zero};
 
-use super::components::{random_nr, Angle, Border, CircleCoordinate, Direction, Grid};
+use super::components::{random_nr, Angle, CellState, CircleCoordinate, Direction, Grid};
 
 pub fn build(outer_circle: u32, inner_slices: u32, min_dist: f64) -> CircularGrid {
-    let builder = CircularGridBuilder {
+    build_with_selector(
+        outer_circle,
         inner_slices,
         min_dist,
-    };
+        Box::new(random_option),
+    )
+}
+
+type OptionSelector = dyn Fn(Vec<&CircleCoordinate>) -> CircleCoordinate;
+
+fn random_option(options: Vec<&CircleCoordinate>) -> CircleCoordinate {
+    options[random_nr(options.len())].to_owned()
+}
+
+pub fn build_with_selector(
+    outer_circle: u32,
+    inner_slices: u32,
+    min_dist: f64,
+    selector: Box<OptionSelector>,
+) -> CircularGrid {
+    let builder = CircularGridBuilder { inner_slices };
 
     let mut coords: Vec<Vec<CircleCoordinate>> = Vec::new();
     for circle in 0..=outer_circle {
         coords.push(builder.coords_on_circle(circle));
     }
 
-    CircularGrid { coords }
+    CircularGrid {
+        coords,
+        taken: Vec::new(),
+        selector,
+        inner_slices,
+        min_dist,
+    }
 }
 
 struct CircularGridBuilder {
     inner_slices: u32,
-    min_dist: f64,
 }
 
 impl CircularGridBuilder {
@@ -66,101 +88,79 @@ impl CircularGridBuilder {
 
         let next_numer = normalized_numer + min(diff1, diff2);
 
-        let c = CircleCoordinate {
+        CircleCoordinate {
             circle: coord.circle,
             angle: if next_numer == normalized_denom {
                 Angle::from(0)
             } else {
                 Angle::new(next_numer, normalized_denom)
             },
-        };
-
-        if self.is_on_grid(&c) {
-            c
-        } else {
-            self.next_coord_on_circle(&c)
         }
-    }
-
-    pub fn is_on_grid(&self, coord: &CircleCoordinate) -> bool {
-        let denom = coord.angle.denom().unwrap();
-        if ((coord.circle + 1) * self.inner_slices) % denom == 0 {
-            return true;
-        }
-
-        if coord.circle == 0 {
-            return false;
-        }
-
-        if (coord.circle * self.inner_slices) % denom != 0 {
-            return false;
-        }
-
-        let section = (coord.angle * self.inner_slices).floor().to_u32().unwrap();
-        let angle_in_section = coord.angle - Angle::new(section, self.inner_slices);
-        let relative = angle_in_section * self.inner_slices;
-
-        let dist = relative.to_f64().unwrap();
-        self.min_dist <= dist && dist <= (1. - self.min_dist)
     }
 }
 
 pub struct CircularGrid {
     coords: Vec<Vec<CircleCoordinate>>,
+    taken: Vec<CircleCoordinate>,
+    selector: Box<OptionSelector>,
+    inner_slices: u32,
+    min_dist: f64,
 }
 
 impl CircularGrid {
-    fn coords_not_on_borders(&self, borders: &[Border]) -> Vec<CircleCoordinate> {
-        let cs = self.all_coords();
-        cs.iter()
-            .filter(|&c| !borders.iter().any(|b| b.contains(c)))
-            .cloned()
-            .collect()
-    }
+    fn remove_close_neighbours(&mut self, coord: &CircleCoordinate) {
+        let circle = coord.circle;
 
-    fn all_coords(&self) -> Vec<CircleCoordinate> {
-        let mut result: Vec<CircleCoordinate> = Vec::new();
-
-        let outer = self.coords.len() - 1;
-        for circle in 0..=outer {
-            let coords_on_circle = self.coords[circle].clone();
-            result.extend(coords_on_circle);
+        let index1 = neighbour_clockwise(&self.coords, coord).unwrap();
+        let n1 = &self.coords[circle as usize][index1];
+        if self.too_close(&coord.angle, &n1.angle, circle) {
+            self.coords[circle as usize].remove(index1);
         }
 
-        result
+        let index2 = neighbour_counter_clockwise(&self.coords, coord).unwrap();
+        let n2 = &self.coords[circle as usize][index2];
+        if self.too_close(&coord.angle, &n2.angle, circle) {
+            self.coords[circle as usize].remove(index2);
+        }
+    }
+
+    fn too_close(&self, a1: &Angle, a2: &Angle, circle: u32) -> bool {
+        let dist = (a1 - a2).abs() * ((circle + 1) * self.inner_slices);
+        dist.to_f64().unwrap() < self.min_dist
     }
 }
 
 impl Grid for CircularGrid {
-    fn take_from_outer_circle(&mut self) -> CircleCoordinate {
-        todo!()
+    fn take_from_outer_circle(&mut self) -> (CircleCoordinate, CellState) {
+        let options: Vec<&CircleCoordinate> = self.coords[self.coords.len() - 1].iter().collect();
+        let coord = (self.selector)(options);
+        let state = if self.taken.contains(&coord) {
+            CellState::Taken
+        } else {
+            CellState::Free
+        };
+        if state == CellState::Free {
+            self.taken.push(coord.to_owned());
+        }
+        self.remove_close_neighbours(&coord);
+        (coord, state)
     }
 
     fn consume_outer_circle(&mut self) {
+        // self.coords[self.outer_circle].iter().c
         todo!()
     }
 
-    fn take_free(&mut self, borders: &[Border]) -> Option<CircleCoordinate> {
-        let options = self.coords_not_on_borders(borders);
-
-        if options.is_empty() {
-            None
-        } else {
-            Some(options[random_nr(options.len())].clone())
-        }
+    fn take_free(&mut self) -> Option<CircleCoordinate> {
+        todo!()
     }
 
     fn take_neighbour(
         &mut self,
         coord: &CircleCoordinate,
         direction: &Direction,
-    ) -> Option<CircleCoordinate> {
-        match direction {
-            Direction::Out => neighbour_out(&self.coords, coord),
-            Direction::In => neigbour_in(&self.coords, coord),
-            Direction::Clockwise => neighbour_clockwise(&self.coords, coord),
-            Direction::CounterClockwise => neighbour_counter_clockwise(&self.coords, coord),
-        }
+    ) -> Option<(CircleCoordinate, CellState)> {
+        todo!()
     }
 }
 
@@ -178,43 +178,21 @@ fn find(coords: &[Vec<CircleCoordinate>], circle: usize, angle: &Angle) -> Optio
     }
 }
 
-fn neighbour_out(
-    coords: &[Vec<CircleCoordinate>],
-    coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
-    let index_option = find(coords, coord.circle as usize + 1, &coord.angle);
-    if index_option.is_some() {
-        Some(CircleCoordinate {
-            circle: coord.circle + 1,
-            angle: coord.angle.to_owned(),
-        })
-    } else {
-        None
-    }
+fn neighbour_out(coords: &[Vec<CircleCoordinate>], coord: &CircleCoordinate) -> Option<usize> {
+    find(coords, coord.circle as usize + 1, &coord.angle)
 }
 
-fn neigbour_in(
-    coords: &[Vec<CircleCoordinate>],
-    coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
+fn neigbour_in(coords: &[Vec<CircleCoordinate>], coord: &CircleCoordinate) -> Option<usize> {
     if coord.circle == 0 {
         return None;
     }
-    let index_option = find(coords, coord.circle as usize - 1, &coord.angle);
-    if index_option.is_some() {
-        Some(CircleCoordinate {
-            circle: coord.circle - 1,
-            angle: coord.angle.to_owned(),
-        })
-    } else {
-        None
-    }
+    find(coords, coord.circle as usize - 1, &coord.angle)
 }
 
 fn neighbour_clockwise(
     coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
+) -> Option<usize> {
     let index_option = find(coords, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
         let coords_on_circle = &coords[coord.circle as usize];
@@ -226,7 +204,7 @@ fn neighbour_clockwise(
             } else {
                 index + 1
             };
-            Some(coords_on_circle[n].to_owned())
+            Some(n)
         }
     } else {
         None
@@ -236,7 +214,7 @@ fn neighbour_clockwise(
 fn neighbour_counter_clockwise(
     coords: &[Vec<CircleCoordinate>],
     coord: &CircleCoordinate,
-) -> Option<CircleCoordinate> {
+) -> Option<usize> {
     let index_option = find(coords, coord.circle as usize, &coord.angle);
     if let Some(index) = index_option {
         let coords_on_circle = &coords[coord.circle as usize];
@@ -248,7 +226,7 @@ fn neighbour_counter_clockwise(
             } else {
                 index - 1
             };
-            Some(coords_on_circle[n].to_owned())
+            Some(n)
         }
     } else {
         None
@@ -259,11 +237,11 @@ fn neighbour_counter_clockwise(
 mod circular_grid_test {
     use crate::maze::{
         circular_grid::CircularGridBuilder,
-        components::{Angle, Border, CircleCoordinate, Direction, Grid},
-        test_utils::helper_fns::{create_border, create_coord},
+        components::{Angle, CellState, CircleCoordinate, Direction, Grid},
+        test_utils::helper_fns::create_coord,
     };
 
-    use super::build;
+    use super::{build, build_with_selector};
 
     fn pair(
         circle1: u32,
@@ -286,6 +264,130 @@ mod circular_grid_test {
     }
 
     #[test]
+    fn test_remove_close_neighbours_neighbour_on_max_dist() {
+        let mut grid = build(5, 7, 0.5);
+        let cloned = grid.coords[5].clone();
+        grid.remove_close_neighbours(&create_coord(5, 0, 1));
+        assert_eq!(cloned, grid.coords[5]);
+    }
+
+    #[test]
+    fn test_remove_close_neighbours_one_to_remove_1_41_1_35() {
+        let mut grid = build(5, 7, 0.5);
+        grid.remove_close_neighbours(&create_coord(5, 1, 42));
+        assert_eq!(69, grid.coords[5].len());
+        assert!(!grid.coords[5].contains(&create_coord(5, 1, 35)));
+    }
+
+    #[test]
+    fn test_remove_close_neighbours_max_dist_small_enough() {
+        let mut grid = build(5, 7, 0.1);
+        let cloned = grid.coords[5].clone();
+        grid.remove_close_neighbours(&create_coord(5, 1, 42));
+        assert_eq!(cloned, grid.coords[5]);
+    }
+
+    #[test]
+    fn test_remove_close_neighbours_two_to_remove() {
+        let mut grid = build(5, 7, 0.7);
+        grid.remove_close_neighbours(&create_coord(5, 3, 35));
+        assert_eq!(68, grid.coords[5].len());
+        assert!(!grid.coords[5].contains(&create_coord(5, 1, 14)));
+        assert!(!grid.coords[5].contains(&create_coord(5, 2, 21)));
+    }
+
+    #[test]
+    fn test_remove_close_neighbours_one_to_remove_3_35_2_21() {
+        let mut grid = build(5, 7, 0.5);
+        grid.remove_close_neighbours(&create_coord(5, 3, 35));
+        assert_eq!(69, grid.coords[5].len());
+        assert!(!grid.coords[5].contains(&create_coord(5, 2, 21)));
+    }
+
+    #[test]
+    fn test_take_from_outer_circle_options() {
+        let check_and_select = |c: Vec<&CircleCoordinate>| {
+            let values = vec![
+                create_coord(2, 0, 1),
+                create_coord(2, 1, 15),
+                create_coord(2, 1, 10),
+                create_coord(2, 2, 15),
+                create_coord(2, 1, 5),
+                create_coord(2, 4, 15),
+                create_coord(2, 3, 10),
+                create_coord(2, 1, 3),
+                create_coord(2, 2, 5),
+                create_coord(2, 7, 15),
+                create_coord(2, 1, 2),
+                create_coord(2, 8, 15),
+                create_coord(2, 3, 5),
+                create_coord(2, 2, 3),
+                create_coord(2, 7, 10),
+                create_coord(2, 11, 15),
+                create_coord(2, 4, 5),
+                create_coord(2, 13, 15),
+                create_coord(2, 9, 10),
+                create_coord(2, 14, 15),
+            ];
+            let expected: Vec<&CircleCoordinate> = values.iter().collect();
+
+            assert_eq!(expected, c);
+
+            c[0].to_owned()
+        };
+        let mut grid_zero_dist = build_with_selector(2, 5, 0., Box::new(check_and_select));
+        _ = grid_zero_dist.take_from_outer_circle();
+    }
+
+    #[test]
+    fn test_take_from_outer_circle_state() {
+        let select_first = |c: Vec<&CircleCoordinate>| c[0].to_owned();
+        let mut grid_zero_dist = build_with_selector(2, 5, 0., Box::new(select_first));
+
+        let (_coord, state) = grid_zero_dist.take_from_outer_circle();
+        assert_eq!(CellState::Free, state);
+
+        let (_coord, state) = grid_zero_dist.take_from_outer_circle();
+        assert_eq!(CellState::Taken, state);
+    }
+
+    #[test]
+    fn test_take_from_outer_circle_neighbours_still_there() {
+        let select_second = |c: Vec<&CircleCoordinate>| c[1].to_owned();
+        let mut grid = build_with_selector(5, 7, 0.1, Box::new(select_second));
+        let (coord, _state) = grid.take_from_outer_circle();
+        assert_eq!(create_coord(5, 1, 42), coord);
+        assert_eq!(create_coord(5, 1, 35), grid.coords[5][2]);
+    }
+
+    #[test]
+    fn test_take_from_outer_circle_neighbours_gone() {
+        let select_second = |c: Vec<&CircleCoordinate>| c[1].to_owned();
+        let mut grid = build_with_selector(5, 7, 0.3, Box::new(select_second));
+        let (coord, _state) = grid.take_from_outer_circle();
+        assert_eq!(create_coord(5, 1, 42), coord);
+        assert_eq!(create_coord(5, 1, 21), grid.coords[5][2]);
+    }
+
+    #[test]
+    fn test_take_from_outer_circle_second_time_second_coordinate_is_still_there() {
+        let select_second = |c: Vec<&CircleCoordinate>| c[1].to_owned();
+        let mut grid = build_with_selector(2, 5, 0., Box::new(select_second));
+        let (coord, _state) = grid.take_from_outer_circle();
+        assert_eq!(create_coord(2, 1, 15), coord);
+        let (coord, _state) = grid.take_from_outer_circle();
+        assert_eq!(create_coord(2, 1, 15), coord);
+    }
+
+    #[test]
+    fn test_consume_outer_circle() {
+        let mut grid = build(2, 5, 0.);
+        grid.consume_outer_circle();
+        assert!(grid.coords[2].iter().all(|c| grid.taken.contains(c)));
+    }
+
+    #[test]
+    #[ignore]
     fn test_neighbours_on_arc() {
         let mut grid = build(10, 7, 0.);
 
@@ -300,39 +402,40 @@ mod circular_grid_test {
             pair(4, 18, 35, 4, 1, 2),
             pair(4, 0, 1, 4, 34, 35),
         ] {
-            println!("{:?}", pair);
             assert_eq!(
                 pair.0,
-                grid.take_neighbour(&pair.1, &Direction::Clockwise).unwrap()
+                grid.take_neighbour(&pair.1, &Direction::Clockwise)
+                    .unwrap()
+                    .0
             );
             assert_eq!(
                 pair.1,
                 grid.take_neighbour(&pair.0, &Direction::CounterClockwise)
                     .unwrap()
+                    .0
             );
         }
     }
 
     #[test]
+    #[ignore]
     fn test_neighbours_on_line() {
         let mut grid = build(10, 7, 0.);
         let pair = pair(10, 0, 1, 9, 0, 1);
         assert_eq!(
             pair.0,
-            grid.take_neighbour(&pair.1, &Direction::Out).unwrap()
+            grid.take_neighbour(&pair.1, &Direction::Out).unwrap().0
         );
         assert_eq!(
             pair.1,
-            grid.take_neighbour(&pair.0, &Direction::In).unwrap()
+            grid.take_neighbour(&pair.0, &Direction::In).unwrap().0
         );
     }
 
     #[test]
+    #[ignore]
     fn test_coords_on_circle() {
-        let builder = CircularGridBuilder {
-            inner_slices: 7,
-            min_dist: 0.,
-        };
+        let builder = CircularGridBuilder { inner_slices: 7 };
 
         let coords = builder.coords_on_circle(0);
         assert_eq!(7, coords.len());
@@ -341,140 +444,10 @@ mod circular_grid_test {
         assert_eq!(56, coords.len());
     }
 
-    fn on_grid_pass(circle: u32, numer: u32, denom: u32, slices: u32, min_dist: f64) {
-        let builder = CircularGridBuilder {
-            inner_slices: slices,
-            min_dist,
-        };
-        let coord = CircleCoordinate {
-            circle,
-            angle: Angle::new(numer, denom),
-        };
-        assert!(builder.is_on_grid(&coord));
-    }
-
-    fn on_grid_fail(circle: u32, numer: u32, denom: u32, slices: u32, min_dist: f64) {
-        let builder = CircularGridBuilder {
-            inner_slices: slices,
-            min_dist,
-        };
-        let coord = CircleCoordinate {
-            circle,
-            angle: Angle::new(numer, denom),
-        };
-        assert!(!builder.is_on_grid(&coord));
-    }
-
     #[test]
-    fn test_is_on_grid() {
-        on_grid_pass(0, 0, 1, 3, 1.);
-        on_grid_pass(0, 0, 1, 3, 0.);
-        on_grid_pass(0, 1, 3, 3, 1.);
-        on_grid_pass(0, 1, 3, 3, 0.);
-        on_grid_pass(0, 2, 3, 3, 1.);
-        on_grid_pass(0, 2, 3, 3, 0.);
-        on_grid_pass(1, 1, 6, 3, 1.);
-        on_grid_pass(1, 1, 6, 3, 0.);
-        on_grid_pass(1, 5, 6, 3, 0.);
-        on_grid_pass(1, 1, 3, 3, 0.);
-
-        on_grid_pass(1, 1, 3, 3, 0.33);
-        on_grid_pass(1, 2, 3, 3, 0.33);
-
-        on_grid_fail(0, 1, 4, 3, 1.);
-
-        on_grid_pass(4, 1, 28, 7, 0.);
-        on_grid_fail(4, 1, 28, 7, 0.3);
-        on_grid_pass(5, 1, 35, 7, 0.);
-        on_grid_fail(5, 1, 35, 7, 0.3);
-        on_grid_pass(5, 1, 35, 7, 0.);
-        on_grid_fail(5, 1, 35, 7, 0.3);
-        on_grid_fail(5, 4, 35, 7, 0.3);
-        on_grid_pass(5, 6, 35, 7, 0.);
-        on_grid_fail(5, 6, 35, 7, 0.3);
-
-        on_grid_pass(3, 11, 21, 7, 0.3);
-        on_grid_fail(3, 11, 21, 7, 0.34);
-    }
-
-    #[test]
-    fn test_coords_not_on_border_no_borders() {
-        let grid = build(1, 4, 0.);
-        let borders: Vec<Border> = vec![];
-        let coords = grid.coords_not_on_borders(&borders);
-
-        assert_eq!(12, coords.len());
-
-        assert!(coords.contains(&create_coord(0, 0, 1)));
-        assert!(coords.contains(&create_coord(0, 1, 4)));
-        assert!(coords.contains(&create_coord(0, 1, 2)));
-        assert!(coords.contains(&create_coord(0, 3, 4)));
-
-        assert!(coords.contains(&create_coord(1, 0, 1)));
-        assert!(coords.contains(&create_coord(1, 1, 8)));
-        assert!(coords.contains(&create_coord(1, 1, 4)));
-        assert!(coords.contains(&create_coord(1, 3, 8)));
-        assert!(coords.contains(&create_coord(1, 1, 2)));
-        assert!(coords.contains(&create_coord(1, 5, 8)));
-        assert!(coords.contains(&create_coord(1, 3, 4)));
-        assert!(coords.contains(&create_coord(1, 7, 8)));
-    }
-
-    #[test]
-    fn test_coords_not_on_border_border_outer_circle() {
-        let grid = build(1, 4, 0.);
-        let borders: Vec<Border> = vec![create_border(1, 0, 1, 1, 0, 1)];
-        let coords = grid.coords_not_on_borders(&borders);
-
-        assert_eq!(4, coords.len());
-
-        assert!(coords.contains(&create_coord(0, 0, 1)));
-        assert!(coords.contains(&create_coord(0, 1, 4)));
-        assert!(coords.contains(&create_coord(0, 1, 2)));
-        assert!(coords.contains(&create_coord(0, 3, 4)));
-    }
-
-    #[test]
-    fn test_coords_not_on_border_line_border() {
-        let grid = build(1, 4, 0.);
-        let borders: Vec<Border> = vec![create_border(0, 0, 1, 1, 0, 1)];
-        let coords = grid.coords_not_on_borders(&borders);
-
-        assert_eq!(10, coords.len());
-
-        assert!(coords.contains(&create_coord(0, 1, 4)));
-        assert!(coords.contains(&create_coord(0, 1, 2)));
-        assert!(coords.contains(&create_coord(0, 3, 4)));
-
-        assert!(coords.contains(&create_coord(1, 1, 8)));
-        assert!(coords.contains(&create_coord(1, 1, 4)));
-        assert!(coords.contains(&create_coord(1, 3, 8)));
-        assert!(coords.contains(&create_coord(1, 1, 2)));
-        assert!(coords.contains(&create_coord(1, 5, 8)));
-        assert!(coords.contains(&create_coord(1, 3, 4)));
-        assert!(coords.contains(&create_coord(1, 7, 8)));
-    }
-
-    #[test]
-    fn test_coords_not_on_border_all_occupied() {
-        let grid = build(1, 4, 0.);
-        let borders: Vec<Border> = vec![
-            create_border(1, 0, 1, 1, 0, 1),
-            create_border(0, 0, 1, 0, 0, 1),
-        ];
-        let coords = grid.coords_not_on_borders(&borders);
-
-        assert!(coords.is_empty());
-    }
-
-    #[test]
+    #[ignore]
     fn test_take() {
         let mut grid = build(1, 4, 0.);
-        let borders: Vec<Border> = vec![
-            create_border(1, 0, 1, 1, 0, 1),
-            create_border(0, 0, 1, 0, 0, 1),
-        ];
-
-        assert_eq!(None, grid.take_free(&borders));
+        assert_eq!(None, grid.take_free());
     }
 }

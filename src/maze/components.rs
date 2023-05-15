@@ -8,15 +8,21 @@ pub enum Direction {
     CounterClockwise,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CellState {
+    Free,
+    Taken,
+}
+
 pub trait Grid {
-    fn take_from_outer_circle(&mut self) -> CircleCoordinate;
+    fn take_from_outer_circle(&mut self) -> (CircleCoordinate, CellState);
     fn consume_outer_circle(&mut self);
-    fn take_free(&mut self, borders: &[Border]) -> Option<CircleCoordinate>;
+    fn take_free(&mut self) -> Option<CircleCoordinate>;
     fn take_neighbour(
         &mut self,
         coord: &CircleCoordinate,
         direction: &Direction,
-    ) -> Option<CircleCoordinate>;
+    ) -> Option<(CircleCoordinate, CellState)>;
 }
 
 pub type Angle = GenericFraction<u32>;
