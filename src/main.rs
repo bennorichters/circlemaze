@@ -5,6 +5,9 @@ mod maze;
 mod svg;
 
 fn main() {
-    let borders = build_maze(15, 9, 0.2);
-    _ = draw::draw(borders);
+    let circles = 30;
+    let base_segments = 10;
+    let min_distance = 0.3;
+    let borders = build_maze(circles, base_segments, min_distance);
+    _ = draw::draw(circles as usize, borders);
 }

@@ -5,16 +5,26 @@ use crate::maze::components::Border;
 
 use super::parse::{Canvas, CartesianCoord, Parser};
 
-pub fn draw(borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
-    let parser = Parser{ center: (400., 350.), radius_inner_circle: 20, borders };
-    let canvas = parser.parse(
-        SvgCanvas {
-            path: String::new(),
-            circle: None,
-        },
-    );
+const RADIUS_INNER_CIRCLE: u32 = 10;
+
+pub fn draw(circles: usize, borders: Vec<Border>) -> Result<(), Box<dyn Error>> {
+    let center = RADIUS_INNER_CIRCLE * (circles as u32 + 1);
+    let parser = Parser {
+        center: (center as f64, center as f64),
+        radius_inner_circle: RADIUS_INNER_CIRCLE,
+        borders,
+    };
+    let canvas = parser.parse(SvgCanvas {
+        path: String::new(),
+        circle: None,
+    });
 
     let mut data: HashMap<String, String> = HashMap::new();
+    let view_box_size = center * 2 + RADIUS_INNER_CIRCLE;
+    data.insert(
+        "view_box".to_string(),
+        format!("0 0 {} {}", view_box_size, view_box_size),
+    );
     data.insert("path".to_string(), canvas.path);
     if let Some(circle) = canvas.circle {
         data.insert("circle_center_x".to_string(), circle.center_x);

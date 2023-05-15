@@ -4,7 +4,7 @@ use super::{
 };
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
-    let grid = circular_grid::build(circles, inner_slices, min_dist);
+    let grid = circular_grid::build(circles - 1, inner_slices, min_dist);
 
     let mut maze = MazeBuilder {
         grid: Box::new(grid),
