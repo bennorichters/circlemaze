@@ -57,7 +57,7 @@ pub fn random_nr(upper_bound: usize) -> usize {
     (rand::random::<f32>() * upper_bound as f32).floor() as usize
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CircleCoordinate {
     pub circle: u32,
     pub angle: Angle,
