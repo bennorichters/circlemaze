@@ -285,7 +285,7 @@ fn neighbour_counter_clockwise(
 mod circular_grid_test {
     use crate::maze::{
         circular_grid::build_circular_grid,
-        components::{Angle, CellState, CircleCoordinate, Direction, Distributor, Grid},
+        components::{Angle, CellState, CircleCoordinate, Direction, Distributor},
         test_utils::helper_fns::create_coord,
     };
 

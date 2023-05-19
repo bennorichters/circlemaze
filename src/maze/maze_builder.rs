@@ -1,16 +1,13 @@
-use super::{
-    circular_grid,
-    components::{random_nr, Border, BorderType, CircleCoordinate, Direction, Distributor, CellState},
+use super::components::Border;
+use super::components::{
+    random_nr, BorderType, CellState, CircleCoordinate, Direction, Distributor,
 };
 
-pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
-    let mut grid = circular_grid::build(circles - 1, inner_slices, min_dist);
-
+pub fn build_maze(dist: Box<dyn Distributor>) -> Vec<Border> {
     let mut maze = MazeBuilder {
-        grid: grid.dist(),
+        grid: dist,
         borders: Vec::new(),
     };
-
     maze.create_borders();
     maze.borders
 }
