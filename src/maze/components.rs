@@ -15,6 +15,10 @@ pub enum CellState {
 }
 
 pub trait Grid {
+    fn dist(&mut self) -> Box<dyn Distributor>;
+}
+
+pub trait Distributor {
     fn take_from_outer_circle(&mut self) -> (CircleCoordinate, CellState);
     fn consume_outer_circle(&mut self);
     fn take_free(&mut self) -> Option<CircleCoordinate>;

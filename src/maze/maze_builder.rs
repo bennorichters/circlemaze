@@ -1,13 +1,13 @@
 use super::{
     circular_grid,
-    components::{random_nr, Border, BorderType, CircleCoordinate, Direction, Grid, CellState},
+    components::{random_nr, Border, BorderType, CircleCoordinate, Direction, Distributor, CellState},
 };
 
 pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border> {
-    let grid = circular_grid::build(circles - 1, inner_slices, min_dist);
+    let mut grid = circular_grid::build(circles - 1, inner_slices, min_dist);
 
     let mut maze = MazeBuilder {
-        grid: Box::new(grid),
+        grid: grid.dist(),
         borders: Vec::new(),
     };
 
@@ -16,7 +16,7 @@ pub fn build_maze(circles: u32, inner_slices: u32, min_dist: f64) -> Vec<Border>
 }
 
 struct MazeBuilder {
-    grid: Box<dyn Grid>,
+    grid: Box<dyn Distributor>,
     borders: Vec<Border>,
 }
 
