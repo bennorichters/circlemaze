@@ -5,7 +5,7 @@ use super::components::{
 
 pub fn build_maze(dist: Box<dyn Distributor>) -> Vec<Border> {
     let mut maze = MazeBuilder {
-        grid: dist,
+        dist,
         borders: Vec::new(),
     };
     maze.create_borders();
@@ -13,19 +13,19 @@ pub fn build_maze(dist: Box<dyn Distributor>) -> Vec<Border> {
 }
 
 struct MazeBuilder {
-    grid: Box<dyn Distributor>,
+    dist: Box<dyn Distributor>,
     borders: Vec<Border>,
 }
 
 impl MazeBuilder {
     fn create_borders(&mut self) {
-        let (outer_coord, _status) = self.grid.take_from_outer_circle();
-        self.grid.consume_outer_circle();
+        let (outer_coord, _status) = self.dist.take_from_outer_circle();
+        self.dist.consume_outer_circle();
         self.borders.push(Border {
             start: outer_coord.to_owned(),
             end: outer_coord,
         });
-        while let Some(coord) = self.grid.take_free() {
+        while let Some(coord) = self.dist.take_free() {
             self.create_path(&coord);
         }
     }
@@ -62,7 +62,7 @@ impl MazeBuilder {
         while !options.is_empty() {
             let (candidate_start, candidate_direction) = options.remove(random_nr(options.len()));
             let neighbour_option = self
-                .grid
+                .dist
                 .take_neighbour(&candidate_start, &candidate_direction);
             if let Some((end, status)) = neighbour_option {
                 if !current_path.contains(&end) {
