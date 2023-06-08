@@ -1,15 +1,9 @@
-use super::components::Border;
-use super::components::{
-    random_nr, BorderType, CellState, CircleCoordinate, Direction, Distributor,
-};
+use crate::maze::components::random_nr;
 
-pub fn build_maze(dist: Box<dyn Distributor>) -> Vec<Border> {
-    let mut maze = MazeBuilder {
-        dist,
-        borders: Vec::new(),
-    };
-    maze.create_borders();
-    maze.borders
+use super::components::{Border, Distributor, CircleCoordinate, Direction, CellState, BorderType};
+
+pub fn build_maze(dist: &impl Distributor) -> Vec<Border> {
+    todo!()
 }
 
 struct MazeBuilder {
@@ -23,11 +17,11 @@ impl MazeBuilder {
         self.dist.consume_outer_circle();
         self.borders.push(Border {
             start: outer_coord.to_owned(),
-            end: outer_coord,
+            end: outer_coord.to_owned(),
         });
-        while let Some(coord) = self.dist.take_free() {
-            self.create_path(&coord);
-        }
+        // while let Some(coord) = self.dist.take_free() {
+        //     self.create_path(&coord);
+        // }
     }
 
     fn create_path(&mut self, start_coord: &CircleCoordinate) -> Vec<CircleCoordinate> {
@@ -66,7 +60,7 @@ impl MazeBuilder {
                 .take_neighbour(&candidate_start, &candidate_direction);
             if let Some((end, status)) = neighbour_option {
                 if !current_path.contains(&end) {
-                    return (candidate_start, end, candidate_direction, status);
+                    return (candidate_start, end.to_owned(), candidate_direction, status);
                 }
             }
         }
